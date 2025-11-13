@@ -1,12 +1,58 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import LandingPage from './src/screens/LandingPage';
+import SignUpScreen from './src/screens/SignUpScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import { setupDeepLinking } from './src/utils/linking';
+import { supabase } from './src/lib/supabase';
 
 export default function App() {
+  const [currentScreen, setCurrentScreen] = useState('landing');
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    setupDeepLinking(supabase);
+
+    // Écouter les changements d'authentification
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth event:', event);
+      
+      if (session?.user) {
+        // Récupérer le profil de l'utilisateur
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        setUser({ ...session.user, ...profile });
+        setCurrentScreen('home');
+      } else {
+        setUser(null);
+        setCurrentScreen('landing');
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  const navigation = {
+    navigate: (screen) => setCurrentScreen(screen),
+    goBack: () => setCurrentScreen('landing'),
+  };
+
   return (
     <>
       <StatusBar style="dark" />
-      <LandingPage />
+      {currentScreen === 'landing' ? (
+        <LandingPage navigation={navigation} />
+      ) : currentScreen === 'signup' ? (
+        <SignUpScreen navigation={navigation} />
+      ) : (
+        <HomeScreen navigation={navigation} user={user} />
+      )}
     </>
   );
 }
