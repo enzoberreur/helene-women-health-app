@@ -1,0 +1,28 @@
+<svg width="400" height="400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Center circle -->
+  <circle cx="200" cy="200" r="30" fill="#FF006E"/>
+  
+  <!-- Top circle -->
+  <circle cx="200" cy="80" r="60" fill="#FF6BA7"/>
+  
+  <!-- Top right circle -->
+  <circle cx="284.85" cy="115.15" r="50" fill="#FFB3D4"/>
+  
+  <!-- Right circle -->
+  <circle cx="320" cy="200" r="60" fill="#FF6BA7"/>
+  
+  <!-- Bottom right circle -->
+  <circle cx="284.85" cy="284.85" r="50" fill="#FFB3D4"/>
+  
+  <!-- Bottom circle -->
+  <circle cx="200" cy="320" r="60" fill="#FF6BA7"/>
+  
+  <!-- Bottom left circle -->
+  <circle cx="115.15" cy="284.85" r="50" fill="#FFB3D4"/>
+  
+  <!-- Left circle -->
+  <circle cx="80" cy="200" r="60" fill="#FF6BA7"/>
+  
+  <!-- Top left circle -->
+  <circle cx="115.15" cy="115.15" r="50" fill="#FFB3D4"/>
+</svg>
