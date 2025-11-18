@@ -35,6 +35,18 @@ export default function SignUpScreen({ navigation }) {
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
 
+  const capitalizeName = (text) => {
+    return text
+      .toLowerCase()
+      .split('-')
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join('-');
+  };
+
+  const handleNameChange = (text) => {
+    setName(capitalizeName(text));
+  };
+
   const animateProgress = (toStep) => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -218,7 +230,7 @@ export default function SignUpScreen({ navigation }) {
                       placeholder="Entrez votre prénom"
                       placeholderTextColor={COLORS.gray[300]}
                       value={name}
-                      onChangeText={setName}
+                      onChangeText={handleNameChange}
                       autoCapitalize="words"
                       autoFocus={false}
                     />

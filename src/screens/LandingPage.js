@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING } from '../constants/theme';
 import { supabase } from '../lib/supabase';
+import { LanguageContext } from '../../App';
 
 const { width, height } = Dimensions.get('window');
 
@@ -79,10 +80,12 @@ const RotatingLogo = () => {
 };
 
 export default function LandingPage({ navigation }) {
+  const { t, language, setLanguage } = useContext(LanguageContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     try {
@@ -107,19 +110,60 @@ export default function LandingPage({ navigation }) {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert(
+        t.common.error,
+        language === 'fr' 
+          ? 'Veuillez entrer votre email pour réinitialiser votre mot de passe.'
+          : 'Please enter your email to reset your password.',
+        [{ text: t.common.ok }]
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        {
+          redirectTo: 'helene://reset-password',
+        }
+      );
+
+      if (error) throw error;
+
+      Alert.alert(
+        language === 'fr' ? 'Email envoyé' : 'Email sent',
+        language === 'fr' 
+          ? 'Un lien de réinitialisation a été envoyé à votre adresse email.'
+          : 'A reset link has been sent to your email address.',
+        [{ text: t.common.ok }]
+      );
+    } catch (error) {
+      Alert.alert(t.common.error, error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAppleLogin = () => {
     Alert.alert(
-      'Bientôt disponible',
-      'La connexion avec Apple arrive dans une prochaine mise à jour.',
-      [{ text: 'OK' }]
+      language === 'fr' ? 'Bientôt disponible' : 'Coming soon',
+      language === 'fr' 
+        ? 'La connexion avec Apple arrive dans une prochaine mise à jour.'
+        : 'Apple sign-in is coming in a future update.',
+      [{ text: t.common.ok }]
     );
   };
 
   const handleGoogleLogin = () => {
     Alert.alert(
-      'Bientôt disponible',
-      'La connexion avec Google arrive dans une prochaine mise à jour.',
-      [{ text: 'OK' }]
+      language === 'fr' ? 'Bientôt disponible' : 'Coming soon',
+      language === 'fr'
+        ? 'La connexion avec Google arrive dans une prochaine mise à jour.'
+        : 'Google sign-in is coming in a future update.',
+      [{ text: t.common.ok }]
     );
   };
 
@@ -133,8 +177,24 @@ export default function LandingPage({ navigation }) {
           {/* Logo Section */}
           <View style={styles.logoSection}>
             <RotatingLogo />
-            <Text style={styles.logoText}>Hélène</Text>
-            <Text style={styles.tagline}>Votre compagne ménopause</Text>
+            <Text style={styles.logoText}>{t.landing.title}</Text>
+            <Text style={styles.tagline}>{t.landing.tagline}</Text>
+            
+            {/* Language Toggle */}
+            <View style={styles.languageToggle}>
+              <TouchableOpacity 
+                style={[styles.langButton, language === 'fr' && styles.langButtonActive]}
+                onPress={() => setLanguage('fr')}
+              >
+                <Text style={[styles.langText, language === 'fr' && styles.langTextActive]}>FR</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.langButton, language === 'en' && styles.langButtonActive]}
+                onPress={() => setLanguage('en')}
+              >
+                <Text style={[styles.langText, language === 'en' && styles.langTextActive]}>EN</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Login Form */}
@@ -147,7 +207,7 @@ export default function LandingPage({ navigation }) {
 
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder={t.landing.email}
               placeholderTextColor={COLORS.gray[300]}
               value={email}
               onChangeText={setEmail}
@@ -157,17 +217,29 @@ export default function LandingPage({ navigation }) {
               editable={!loading}
             />
             
-            <TextInput
-              style={styles.input}
-              placeholder="Mot de passe"
-              placeholderTextColor={COLORS.gray[300]}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="password"
-              editable={!loading}
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder={t.landing.password}
+                placeholderTextColor={COLORS.gray[300]}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="password"
+                editable={!loading}
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons 
+                  name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                  size={22} 
+                  color={COLORS.gray[400]} 
+                />
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity 
               style={[styles.continueButton, loading && styles.buttonDisabled]} 
@@ -176,48 +248,26 @@ export default function LandingPage({ navigation }) {
               disabled={loading || !email || !password}
             >
               <Text style={styles.continueButtonText}>
-                {loading ? 'Connexion...' : 'CONTINUER →'}
+                {loading ? t.landing.loggingIn : t.landing.login}
               </Text>
             </TouchableOpacity>
 
-            <View style={styles.dividerContainer}>
-              <View style={styles.divider} />
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.divider} />
-            </View>
+            <TouchableOpacity 
+              style={styles.forgotPassword}
+              onPress={handleForgotPassword}
+              disabled={loading}
+            >
+              <Text style={styles.forgotPasswordText}>{t.landing.forgotPassword}</Text>
+            </TouchableOpacity>
 
-            <View style={styles.socialButtonsContainer}>
-              <TouchableOpacity 
-                style={styles.socialButton} 
-                activeOpacity={0.8}
-                onPress={handleAppleLogin}
-                disabled={loading}
-              >
-                <Ionicons name="logo-apple" size={20} color={COLORS.secondary} />
-                <Text style={styles.socialButtonText}>Apple</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.socialButton} 
-                activeOpacity={0.8}
-                onPress={handleGoogleLogin}
-                disabled={loading}
-              >
-                <Ionicons name="logo-google" size={20} color={COLORS.secondary} />
-                <Text style={styles.socialButtonText}>Google</Text>
-              </TouchableOpacity>
-            </View>
+            <View style={styles.divider} />
 
             <TouchableOpacity 
               style={styles.signupButton} 
               activeOpacity={0.8}
               onPress={() => navigation.navigate('signup')}
             >
-              <Text style={styles.signupButtonText}>Créer un compte</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+              <Text style={styles.signupButtonText}>{t.landing.createAccount}</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -233,40 +283,64 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'space-evenly',
-    paddingHorizontal: SPACING.xl,
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.xl * 1.5,
   },
   logoSection: {
     alignItems: 'center',
-    paddingTop: SPACING.lg,
-    marginBottom: SPACING.xs,
+    marginBottom: SPACING.xxl * 2,
   },
   logoContainer: {
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.lg,
   },
   logoText: {
-    fontSize: 40,
+    fontSize: 48,
     fontFamily: 'Times New Roman',
     fontStyle: 'italic',
     color: COLORS.secondary,
     fontWeight: '400',
-    marginTop: SPACING.md,
-    letterSpacing: -0.5,
+    marginTop: SPACING.lg,
+    letterSpacing: -1,
   },
   tagline: {
-    fontSize: 15,
+    fontSize: 16,
     color: COLORS.gray[400],
     marginTop: SPACING.xs,
+    fontStyle: 'italic',
+  },
+  languageToggle: {
+    flexDirection: 'row',
+    marginTop: SPACING.lg,
+    borderRadius: 8,
+    backgroundColor: COLORS.white,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: COLORS.gray[200],
+  },
+  langButton: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: 6,
+  },
+  langButtonActive: {
+    backgroundColor: COLORS.primary,
+  },
+  langText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.gray[400],
+  },
+  langTextActive: {
+    color: COLORS.white,
   },
   formSection: {
     width: '100%',
-    paddingBottom: SPACING.lg,
   },
   errorContainer: {
     backgroundColor: '#FEE2E2',
     padding: SPACING.md,
     borderRadius: 12,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.lg,
   },
   errorText: {
     color: '#DC2626',
@@ -274,100 +348,73 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   input: {
-    backgroundColor: '#F5F5F5',
-    borderWidth: 0,
-    borderRadius: 14,
-    paddingVertical: SPACING.md + 2,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.gray[200],
+    borderRadius: 12,
+    paddingVertical: SPACING.md + 4,
     paddingHorizontal: SPACING.lg,
-    fontSize: 15,
+    fontSize: 16,
     color: COLORS.secondary,
-    marginBottom: SPACING.sm + 4,
+    marginBottom: SPACING.md,
+  },
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: SPACING.md,
+  },
+  passwordInput: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.gray[200],
+    borderRadius: 12,
+    paddingVertical: SPACING.md + 4,
+    paddingHorizontal: SPACING.lg,
+    paddingRight: 50,
+    fontSize: 16,
+    color: COLORS.secondary,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: SPACING.md,
+    top: SPACING.md + 6,
   },
   continueButton: {
     backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.md + 4,
-    paddingHorizontal: SPACING.xl,
-    borderRadius: 16,
+    paddingVertical: SPACING.md + 6,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: SPACING.md,
-    shadowColor: COLORS.primary,
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
+    marginTop: SPACING.sm,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   continueButtonText: {
     color: COLORS.white,
-    fontSize: 15,
-    fontWeight: '600',
-    letterSpacing: 0.8,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: SPACING.lg,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.gray[200],
-  },
-  dividerText: {
-    marginHorizontal: SPACING.md,
-    fontSize: 13,
-    color: COLORS.gray[400],
-  },
-  socialButtonsContainer: {
-    flexDirection: 'row',
-    gap: SPACING.sm + 4,
-    marginBottom: SPACING.md,
-  },
-  socialButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.white,
-    borderWidth: 1.5,
-    borderColor: COLORS.gray[200],
-    paddingVertical: SPACING.md + 2,
-    borderRadius: 14,
-    gap: SPACING.sm,
-  },
-  socialButtonText: {
-    color: COLORS.secondary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  signupButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: SPACING.md + 4,
-    paddingHorizontal: SPACING.xl,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: COLORS.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: SPACING.sm + 4,
-  },
-  signupButtonText: {
-    color: COLORS.secondary,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
   },
   forgotPassword: {
     alignItems: 'center',
-    marginTop: SPACING.lg,
+    paddingVertical: SPACING.md,
+    marginTop: SPACING.sm,
   },
   forgotPasswordText: {
     color: COLORS.gray[400],
     fontSize: 14,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.gray[200],
+    marginVertical: SPACING.lg,
+  },
+  signupButton: {
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+  },
+  signupButtonText: {
+    color: COLORS.gray[500],
+    fontSize: 15,
+    fontWeight: '500',
   },
 });

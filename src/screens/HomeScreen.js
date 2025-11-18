@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING } from '../constants/theme';
 import { supabase } from '../lib/supabase';
+import { LanguageContext } from '../../App';
 
 const DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const CALENDAR_DAYS = Array.from({ length: 35 }, (_, i) => {
@@ -19,23 +20,25 @@ const CALENDAR_DAYS = Array.from({ length: 35 }, (_, i) => {
 });
 
 export default function HomeScreen({ navigation, user }) {
+  const { t, language } = useContext(LanguageContext);
+  
   const handleLogout = async () => {
     Alert.alert(
-      'Déconnexion',
-      'Voulez-vous vraiment vous déconnecter ?',
+      t.home.logout,
+      t.home.logoutConfirm,
       [
         {
-          text: 'Annuler',
+          text: t.home.cancel,
           style: 'cancel',
         },
         {
-          text: 'Déconnexion',
+          text: t.home.logout,
           style: 'destructive',
           onPress: async () => {
             const { error } = await supabase.auth.signOut();
             if (error) {
               console.error('Erreur déconnexion:', error);
-              Alert.alert('Erreur', 'Impossible de se déconnecter');
+              Alert.alert(t.common.error, language === 'fr' ? 'Impossible de se déconnecter' : 'Unable to log out');
             }
           },
         },
@@ -49,7 +52,7 @@ export default function HomeScreen({ navigation, user }) {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Bonjour</Text>
+            <Text style={styles.greeting}>{t.home.hello}</Text>
             <Text style={styles.userName}>{user?.name || 'Hélène'}</Text>
           </View>
           <TouchableOpacity style={styles.profileButton} onPress={handleLogout}>
@@ -60,7 +63,7 @@ export default function HomeScreen({ navigation, user }) {
         {/* Calendar Section */}
         <View style={styles.calendarSection}>
           <View style={styles.calendarHeader}>
-            <Text style={styles.calendarTitle}>Novembre 2025</Text>
+            <Text style={styles.calendarTitle}>{t.home.november} 2025</Text>
             <View style={styles.calendarNav}>
               <TouchableOpacity style={styles.navButton}>
                 <Ionicons name="chevron-back" size={20} color={COLORS.secondary} />
@@ -113,17 +116,17 @@ export default function HomeScreen({ navigation, user }) {
           <View style={styles.statCard}>
             <Ionicons name="flame-outline" size={28} color={COLORS.primary} />
             <Text style={styles.statValue}>--</Text>
-            <Text style={styles.statLabel}>Symptômes</Text>
+            <Text style={styles.statLabel}>{t.home.symptoms}</Text>
           </View>
           <View style={styles.statCard}>
             <Ionicons name="moon-outline" size={28} color={COLORS.primary} />
             <Text style={styles.statValue}>--</Text>
-            <Text style={styles.statLabel}>Sommeil</Text>
+            <Text style={styles.statLabel}>{t.home.sleep}</Text>
           </View>
           <View style={styles.statCard}>
             <Ionicons name="heart-outline" size={28} color={COLORS.primary} />
             <Text style={styles.statValue}>--</Text>
-            <Text style={styles.statLabel}>Humeur</Text>
+            <Text style={styles.statLabel}>{t.home.mood}</Text>
           </View>
         </View>
       </ScrollView>

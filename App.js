@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import LandingPage from './src/screens/LandingPage';
-import SignUpScreen from './src/screens/SignUpScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import { setupDeepLinking } from './src/utils/linking';
 import { supabase } from './src/lib/supabase';
+import { getTranslation } from './src/i18n/translations';
+
+export const LanguageContext = createContext();
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('landing');
   const [user, setUser] = useState(null);
+  const [language, setLanguage] = useState('en'); // 'en' or 'fr'
+  const t = getTranslation(language);
 
   useEffect(() => {
     setupDeepLinking(supabase);
@@ -44,15 +49,15 @@ export default function App() {
   };
 
   return (
-    <>
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
       <StatusBar style="dark" />
       {currentScreen === 'landing' ? (
         <LandingPage navigation={navigation} />
       ) : currentScreen === 'signup' ? (
-        <SignUpScreen navigation={navigation} />
+        <OnboardingScreen navigation={navigation} />
       ) : (
         <HomeScreen navigation={navigation} user={user} />
       )}
-    </>
+    </LanguageContext.Provider>
   );
 }
