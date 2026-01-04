@@ -1,7 +1,14 @@
 export const COLORS = {
   primary: '#FF006E',
+  primaryLight: '#FFF0F7',
   secondary: '#111827',
   white: '#FFFFFF',
+  background: '#F9FAFB',
+  backgroundLight: '#F3F4F6',
+  border: '#E5E7EB',
+  textLight: '#6B7280',
+  error: '#DC2626',
+  success: '#10B981',
   gray: {
     900: '#111827',
     800: '#1F2937',

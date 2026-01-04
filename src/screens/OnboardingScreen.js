@@ -251,22 +251,44 @@ const NOTIFICATION_TIMING = [
       setLoading(true);
       setError('');
 
+      console.log('🔄 Début de la création du compte...');
+
       // 1. Créer le compte
+      console.log('📧 Email:', email.trim().toLowerCase());
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password: password,
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error('❌ Erreur auth:', authError);
+        throw authError;
+      }
+
+      console.log('✅ Compte créé:', authData.user?.id);
+      console.log('📊 Session créée:', authData.session ? 'Oui ✅' : 'Non ❌');
+
+      // Si pas de session, il faut se connecter manuellement
+      if (!authData.session) {
+        console.log('🔑 Connexion manuelle nécessaire...');
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password: password,
+        });
+        if (signInError) throw signInError;
+        console.log('✅ Connexion réussie');
+      }
 
       // 2. Attendre que le trigger crée le profil de base
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('⏳ Attente du trigger...');
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Augmenté à 2 secondes
 
       // 3. Calculer l'IMC
       const bmi = weight && height ? (parseFloat(weight) / Math.pow(parseFloat(height) / 100, 2)).toFixed(1) : null;
 
       // 4. Mettre à jour le profil avec toutes les données
-      const { error: profileError } = await supabase
+      console.log('📝 Mise à jour du profil...');
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .update({
           // Phase 1
@@ -310,14 +332,37 @@ const NOTIFICATION_TIMING = [
         })
         .eq('id', authData.user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('❌ Erreur profil:', profileError);
+        throw profileError;
+      }
 
-      console.log('Profil créé avec succès!');
-      // La redirection se fera automatiquement via onAuthStateChange
+      console.log('✅ Profil créé avec succès!', profileData);
+      console.log('🎉 Inscription terminée, redirection en cours...');
+      
+      // Redirection manuelle immédiate - ne pas attendre l'Alert
+      // Le listener onAuthStateChange devrait déjà avoir fait la redirection
+      // mais on force ici au cas où
+      setLoading(false);
+      
+      // Petit délai pour laisser le temps à React de mettre à jour
+      setTimeout(() => {
+        Alert.alert(
+          'Compte créé !',
+          'Bienvenue dans Hélène 🌸',
+          [{ text: 'OK' }]
+        );
+      }, 100);
 
     } catch (error) {
-      setError(error.message);
-      console.error('Erreur inscription:', error);
+      console.error('❌ Erreur complète:', error);
+      const errorMessage = error.message || 'Une erreur est survenue';
+      setError(errorMessage);
+      Alert.alert(
+        'Erreur',
+        errorMessage,
+        [{ text: 'OK' }]
+      );
     } finally {
       setLoading(false);
     }
