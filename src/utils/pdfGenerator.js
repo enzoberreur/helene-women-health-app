@@ -3,6 +3,7 @@
  */
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { calculateMenqolScore } from './menqolCalculator';
 
 export const generateDoctorReport = async (userData, logs, insights) => {
   const today = new Date().toLocaleDateString('fr-FR', {
@@ -44,6 +45,9 @@ export const generateDoctorReport = async (userData, logs, insights) => {
   const topSymptoms = Object.entries(symptomCounts)
     .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 5);
+
+  // Calculer le score MENQOL
+  const menqolScore = calculateMenqolScore(logs);
 
   // Générer le HTML
   const html = `
@@ -272,6 +276,63 @@ export const generateDoctorReport = async (userData, logs, insights) => {
           </div>
         </div>
       </div>
+
+      <!-- MENQOL Score Section -->
+      ${menqolScore && menqolScore.globalScore > 0 ? `
+        <div class="section">
+          <div class="section-title">Score MENQOL (Menopause-Specific Quality of Life)</div>
+          <div style="background: #F0FDF4; border-left: 4px solid #10B981; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: baseline; justify-content: center; margin-bottom: 15px;">
+              <span style="font-size: 56px; font-weight: 300; color: #E83E73; letter-spacing: -2px;">${menqolScore.globalScore}</span>
+              <span style="font-size: 24px; color: #6B7280; margin-left: 5px;">/8</span>
+            </div>
+            <p style="text-align: center; font-size: 16px; color: #1F1F1F; margin-bottom: 20px;">
+              ${menqolScore.interpretation}
+            </p>
+            
+            <div style="background: white; border-radius: 8px; padding: 15px;">
+              <p style="font-size: 13px; color: #6B7280; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+                Détail par domaine
+              </p>
+              ${Object.entries(menqolScore.domains)
+                .filter(([_, data]) => data.score > 0)
+                .map(([domain, data]) => {
+                  const labels = {
+                    vasomotor: 'Vasomoteur (bouffées, sueurs)',
+                    psychosocial: 'Psychosocial (humeur, anxiété, mémoire)',
+                    physical: 'Physique (fatigue, douleurs, sommeil)',
+                    sexual: 'Sexuel (libido, confort)',
+                  };
+                  const severityLabels = {
+                    mild: 'Léger',
+                    moderate: 'Modéré',
+                    severe: 'Sévère',
+                    very_severe: 'Très sévère',
+                  };
+                  return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #E2E8F0;">
+                      <span style="font-size: 14px; color: #1F1F1F; flex: 1;">${labels[domain]}</span>
+                      <span style="font-size: 14px; font-weight: 600; color: ${data.severity === 'mild' ? '#10B981' : data.severity === 'moderate' ? '#F59E0B' : '#EF4444'};">
+                        ${data.score}/8 (${severityLabels[data.severity]})
+                      </span>
+                    </div>
+                  `;
+                }).join('')}
+            </div>
+
+            <div style="background: #FCECEF; border-radius: 8px; padding: 15px; margin-top: 15px;">
+              <p style="font-size: 13px; color: #1F1F1F; line-height: 1.6;">
+                <strong>💡 Recommandation:</strong> ${menqolScore.recommendation}
+              </p>
+            </div>
+
+            <p style="font-size: 11px; color: #9CA3AF; margin-top: 15px; text-align: center; line-height: 1.5;">
+              Le score MENQOL est un questionnaire standardisé validé scientifiquement pour évaluer 
+              l'impact de la ménopause sur la qualité de vie. Score calculé automatiquement sur ${logs.length} jours.
+            </p>
+          </div>
+        </div>
+      ` : ''}
 
       <!-- Symptoms Section -->
       ${topSymptoms.length > 0 ? `

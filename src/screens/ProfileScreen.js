@@ -30,6 +30,8 @@ export default function ProfileScreen({ navigation, user }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [treatment, setTreatment] = useState(null);
+  const [showTreatmentModal, setShowTreatmentModal] = useState(false);
   const [profile, setProfile] = useState({
     email: user?.email || '',
     age: '',
@@ -54,6 +56,7 @@ export default function ProfileScreen({ navigation, user }) {
 
   useEffect(() => {
     loadProfile();
+    loadTreatment();
     checkNotificationPermissions();
   }, []);
 
@@ -84,6 +87,25 @@ export default function ProfileScreen({ navigation, user }) {
       console.error('Erreur chargement profil:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTreatment = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('hormone_treatment')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('start_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      setTreatment(data);
+    } catch (error) {
+      console.error('Erreur chargement traitement:', error);
     }
   };
 
@@ -264,6 +286,21 @@ export default function ProfileScreen({ navigation, user }) {
     }
   };
 
+  const getTreatmentTypeLabel = (type) => {
+    const labels = {
+      oral_estrogen: 'Estrogène oral',
+      transdermal_patch: 'Patch transdermique',
+      gel: 'Gel',
+      vaginal_estrogen: 'Estrogène vaginal',
+      combined_continuous: 'Combiné continu (E+P)',
+      combined_sequential: 'Combiné séquentiel',
+      progestogen_only: 'Progestérone seule',
+      tibolone: 'Tibolone',
+      other: 'Autre',
+    };
+    return labels[type] || type;
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -394,6 +431,80 @@ export default function ProfileScreen({ navigation, user }) {
               <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
             </View>
           </TouchableOpacity>
+        </View>
+
+        {/* Traitement hormonal */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="medkit" size={24} color={COLORS.text} />
+            <Text style={styles.sectionTitle}>Traitement hormonal (THS)</Text>
+          </View>
+          
+          {treatment ? (
+            <View style={styles.treatmentCard}>
+              <View style={styles.treatmentHeader}>
+                <View style={styles.treatmentBadge}>
+                  <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
+                  <Text style={styles.treatmentBadgeText}>Traitement actif</Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowTreatmentModal(true)}>
+                  <Ionicons name="create-outline" size={20} color={COLORS.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.treatmentInfo}>
+                <View style={styles.treatmentRow}>
+                  <Text style={styles.treatmentLabel}>Type</Text>
+                  <Text style={styles.treatmentValue}>
+                    {getTreatmentTypeLabel(treatment.treatment_type)}
+                  </Text>
+                </View>
+                {treatment.treatment_name && (
+                  <View style={styles.treatmentRow}>
+                    <Text style={styles.treatmentLabel}>Médicament</Text>
+                    <Text style={styles.treatmentValue}>{treatment.treatment_name}</Text>
+                  </View>
+                )}
+                {treatment.dosage && (
+                  <View style={styles.treatmentRow}>
+                    <Text style={styles.treatmentLabel}>Dosage</Text>
+                    <Text style={styles.treatmentValue}>{treatment.dosage}</Text>
+                  </View>
+                )}
+                <View style={styles.treatmentRow}>
+                  <Text style={styles.treatmentLabel}>Début</Text>
+                  <Text style={styles.treatmentValue}>
+                    {new Date(treatment.start_date).toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+                <View style={styles.treatmentRow}>
+                  <Text style={styles.treatmentLabel}>Durée</Text>
+                  <Text style={styles.treatmentValue}>
+                    {Math.floor((new Date() - new Date(treatment.start_date)) / (1000 * 60 * 60 * 24))} jours
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.addTreatmentButton}
+              onPress={() => setShowTreatmentModal(true)}
+            >
+              <View style={styles.addTreatmentIconContainer}>
+                <Ionicons name="add-circle" size={32} color={COLORS.primary} />
+              </View>
+              <View style={styles.addTreatmentContent}>
+                <Text style={styles.addTreatmentTitle}>Ajouter un traitement</Text>
+                <Text style={styles.addTreatmentSubtitle}>
+                  Suivez votre traitement hormonal substitutif
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Export PDF */}
@@ -775,6 +886,83 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: FONTS.body.regular,
     color: COLORS.text,
+  },
+  // Treatment Styles
+  treatmentCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+  },
+  treatmentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.md,
+  },
+  treatmentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: RADIUS.sm,
+  },
+  treatmentBadgeText: {
+    fontSize: 12,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.success,
+  },
+  treatmentInfo: {
+    gap: SPACING.sm,
+  },
+  treatmentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray[200],
+  },
+  treatmentLabel: {
+    fontSize: 14,
+    fontFamily: FONTS.body.regular,
+    color: COLORS.textSecondary,
+  },
+  treatmentValue: {
+    fontSize: 14,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.text,
+  },
+  addTreatmentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    borderStyle: 'dashed',
+  },
+  addTreatmentIconContainer: {
+    marginRight: SPACING.md,
+  },
+  addTreatmentContent: {
+    flex: 1,
+  },
+  addTreatmentTitle: {
+    fontSize: 16,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  addTreatmentSubtitle: {
+    fontSize: 13,
+    fontFamily: FONTS.body.regular,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
   },
   signOutButton: {
     flexDirection: 'row',

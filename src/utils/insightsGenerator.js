@@ -197,6 +197,160 @@ const analyzeTimePattern = (logs) => {
   return null;
 };
 
+/**
+ * Détecte les drapeaux rouges médicaux nécessitant une consultation urgente
+ * @param {Array} logs - Logs des 7-30 derniers jours
+ * @returns {Array} - Liste des alertes avec niveau de sévérité
+ */
+export const detectRedFlags = (logs) => {
+  if (!logs || logs.length === 0) return [];
+
+  const alerts = [];
+  const recentLogs = logs.slice(0, 7); // 7 derniers jours pour alertes urgentes
+  const extendedLogs = logs.slice(0, 14); // 14 jours pour patterns
+
+  // 1. ALERTE ROUGE: Symptômes cardiovasculaires persistants
+  const chestPainDays = recentLogs.filter(log => 
+    log.notes && log.notes.toLowerCase().includes('douleur thoracique') ||
+    log.notes && log.notes.toLowerCase().includes('douleur poitrine') ||
+    log.notes && log.notes.toLowerCase().includes('douleur cœur')
+  ).length;
+
+  const palpitationsDays = recentLogs.filter(log =>
+    log.notes && (
+      log.notes.toLowerCase().includes('palpitation') ||
+      log.notes.toLowerCase().includes('battement')
+    )
+  ).length;
+
+  if (chestPainDays >= 2) {
+    alerts.push({
+      id: 'red-flag-chest-pain',
+      severity: 'critical',
+      icon: 'warning',
+      title: '⚠️ Douleurs thoraciques',
+      message: 'Vous avez signalé des douleurs thoraciques plusieurs fois cette semaine. Ceci nécessite une consultation médicale URGENTE.',
+      action: 'Consultez immédiatement',
+      color: '#EF4444',
+      priority: 1,
+    });
+  } else if (palpitationsDays >= 3) {
+    alerts.push({
+      id: 'red-flag-palpitations',
+      severity: 'high',
+      icon: 'heart-dislike',
+      title: '💔 Palpitations fréquentes',
+      message: 'Les palpitations fréquentes peuvent nécessiter un suivi cardiaque. Parlez-en à votre médecin.',
+      action: 'Consulter rapidement',
+      color: '#F97316',
+      priority: 2,
+    });
+  }
+
+  // 2. ALERTE ROUGE: Dépression sévère persistante
+  const severeLowMoodDays = recentLogs.filter(log => log.mood && log.mood <= 2).length;
+  const suicidalThoughts = recentLogs.filter(log =>
+    log.notes && (
+      log.notes.toLowerCase().includes('suicide') ||
+      log.notes.toLowerCase().includes('mourir') ||
+      log.notes.toLowerCase().includes('en finir')
+    )
+  ).length;
+
+  if (suicidalThoughts > 0) {
+    alerts.push({
+      id: 'red-flag-suicidal',
+      severity: 'critical',
+      icon: 'alert-circle',
+      title: '🆘 Pensées suicidaires',
+      message: 'Vous n\'êtes pas seule. Contactez immédiatement le 3114 (numéro national de prévention du suicide) ou rendez-vous aux urgences.',
+      action: 'Appeler le 3114',
+      color: '#DC2626',
+      priority: 0, // PRIORITÉ MAXIMALE
+    });
+  } else if (severeLowMoodDays >= 5) {
+    alerts.push({
+      id: 'red-flag-severe-depression',
+      severity: 'high',
+      icon: 'sad',
+      title: '😢 Humeur très basse persistante',
+      message: 'Votre humeur est très basse depuis plus de 5 jours. Une consultation avec un professionnel de santé mentale est recommandée.',
+      action: 'Consulter un psychologue',
+      color: '#F97316',
+      priority: 2,
+    });
+  }
+
+  // 3. ALERTE ORANGE: Symptômes neurologiques inhabituels
+  const severeHeadaches = recentLogs.filter(log => log.headaches && log.headaches >= 4).length;
+
+  if (severeHeadaches >= 3) {
+    alerts.push({
+      id: 'red-flag-headaches',
+      severity: 'medium',
+      icon: 'thunderstorm',
+      title: '🤕 Maux de tête intenses',
+      message: 'Des maux de tête intenses et fréquents peuvent nécessiter une évaluation médicale pour écarter d\'autres causes.',
+      action: 'Consulter votre médecin',
+      color: '#F59E0B',
+      priority: 3,
+    });
+  }
+
+  // 4. ALERTE JAUNE: Insomnie sévère prolongée
+  const severeSleepIssues = extendedLogs.filter(log => log.sleep_quality && log.sleep_quality <= 3).length;
+
+  if (severeSleepIssues >= 7) {
+    alerts.push({
+      id: 'red-flag-insomnia',
+      severity: 'medium',
+      icon: 'moon',
+      title: '😴 Insomnie sévère',
+      message: 'Vous dormez mal depuis au moins une semaine. Un mauvais sommeil prolongé peut affecter votre santé globale.',
+      action: 'Discuter avec votre médecin',
+      color: '#F59E0B',
+      priority: 4,
+    });
+  }
+
+  // 5. ALERTE JAUNE: Symptômes vasomoteurs extrêmes
+  const extremeHotFlashes = recentLogs.filter(log => log.hot_flashes && log.hot_flashes === 5).length;
+  const extremeNightSweats = recentLogs.filter(log => log.night_sweats && log.night_sweats === 5).length;
+
+  if (extremeHotFlashes >= 5 || extremeNightSweats >= 5) {
+    alerts.push({
+      id: 'red-flag-extreme-vasomotor',
+      severity: 'medium',
+      icon: 'flame',
+      title: '🔥 Symptômes vasomoteurs intenses',
+      message: 'Vos bouffées de chaleur ou sueurs sont particulièrement intenses. Discutez des options de traitement avec votre médecin.',
+      action: 'Envisager un traitement',
+      color: '#F59E0B',
+      priority: 5,
+    });
+  }
+
+  // 6. ALERTE INFO: Fatigue extrême persistante
+  const extremeFatigue = recentLogs.filter(log => log.fatigue && log.fatigue >= 4).length;
+  const lowEnergy = recentLogs.filter(log => log.energy_level && log.energy_level <= 2).length;
+
+  if (extremeFatigue >= 5 && lowEnergy >= 5) {
+    alerts.push({
+      id: 'red-flag-chronic-fatigue',
+      severity: 'low',
+      icon: 'battery-dead',
+      title: '🪫 Fatigue chronique',
+      message: 'Une fatigue persistante peut avoir plusieurs causes. Un bilan sanguin (thyroïde, fer, vitamine D) pourrait être utile.',
+      action: 'Demander un bilan',
+      color: '#3B82F6',
+      priority: 6,
+    });
+  }
+
+  // Trier par priorité (0 = le plus urgent)
+  return alerts.sort((a, b) => a.priority - b.priority);
+};
+
 export const generateMonthlyInsights = (logs) => {
   if (!logs || logs.length < 7) return [];
 

@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LineChart, BarChart } from 'react-native-chart-kit';
 import { supabase } from '../lib/supabase';
 import { COLORS, FONTS, SPACING, RADIUS } from '../constants/theme';
+import { calculateMenqolScore } from '../utils/menqolCalculator';
 
 const { width } = Dimensions.get('window');
 
@@ -24,6 +25,7 @@ export default function TrendsScreen({ navigation, user }) {
     sleepData: [],
     symptomsData: [],
     labels: [],
+    menqolScore: null,
   });
 
   useEffect(() => {
@@ -75,11 +77,15 @@ export default function TrendsScreen({ navigation, user }) {
           symptomCounts[symptom] = logs.filter(log => log[symptom] && log[symptom] > 0).length;
         });
 
+        // Calculer le score MENQOL
+        const menqolScore = calculateMenqolScore(logs);
+
         setData({
           moodData,
           sleepData,
           symptomsData: symptomCounts,
           labels: period === 7 ? labels : labels.filter((_, i) => i % 3 === 0), // Simplifier les labels pour 30j
+          menqolScore,
         });
       }
     } catch (error) {
@@ -185,6 +191,85 @@ export default function TrendsScreen({ navigation, user }) {
           </View>
         ) : (
           <>
+            {/* MENQOL Score Card */}
+            {data.menqolScore && data.menqolScore.globalScore > 0 && (
+              <View style={styles.menqolSection}>
+                <View style={styles.menqolHeader}>
+                  <View style={styles.menqolTitleContainer}>
+                    <Ionicons name="medical" size={24} color={COLORS.primary} />
+                    <Text style={styles.menqolTitle}>Score MENQOL</Text>
+                  </View>
+                  <View style={styles.menqolBadge}>
+                    <Text style={styles.menqolBadgeText}>Standardisé</Text>
+                  </View>
+                </View>
+
+                <View style={styles.menqolCard}>
+                  <View style={styles.menqolScoreContainer}>
+                    <Text style={styles.menqolScoreValue}>{data.menqolScore.globalScore}</Text>
+                    <Text style={styles.menqolScoreMax}>/8</Text>
+                  </View>
+                  <Text style={styles.menqolInterpretation}>{data.menqolScore.interpretation}</Text>
+
+                  <View style={styles.menqolDomains}>
+                    {Object.entries(data.menqolScore.domains).map(([domain, data]) => {
+                      const domainIcons = {
+                        vasomotor: 'thermometer',
+                        psychosocial: 'brain',
+                        physical: 'body',
+                        sexual: 'heart',
+                      };
+                      const domainLabels = {
+                        vasomotor: 'Vasomoteur',
+                        psychosocial: 'Psychosocial',
+                        physical: 'Physique',
+                        sexual: 'Sexuel',
+                      };
+                      const severityColors = {
+                        none: COLORS.gray[300],
+                        mild: '#10B981',
+                        moderate: '#F59E0B',
+                        severe: '#F97316',
+                        very_severe: '#EF4444',
+                      };
+
+                      if (data.score === 0) return null;
+
+                      return (
+                        <View key={domain} style={styles.menqolDomain}>
+                          <View style={styles.menqolDomainHeader}>
+                            <Ionicons name={domainIcons[domain]} size={16} color={severityColors[data.severity]} />
+                            <Text style={styles.menqolDomainLabel}>{domainLabels[domain]}</Text>
+                          </View>
+                          <View style={styles.menqolDomainScore}>
+                            <View style={styles.menqolDomainBar}>
+                              <View 
+                                style={[
+                                  styles.menqolDomainProgress,
+                                  { 
+                                    width: `${(data.score / 8) * 100}%`,
+                                    backgroundColor: severityColors[data.severity],
+                                  }
+                                ]} 
+                              />
+                            </View>
+                            <Text style={[styles.menqolDomainValue, { color: severityColors[data.severity] }]}>
+                              {data.score}/8
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+
+                  <View style={styles.menqolRecommendation}>
+                    <Ionicons name="information-circle" size={16} color={COLORS.primary} />
+                    <Text style={styles.menqolRecommendationText}>{data.menqolScore.recommendation}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
             {/* Mood Chart */}
             <View style={styles.chartSection}>
               <Text style={styles.chartTitle}>Humeur</Text>
@@ -487,5 +572,131 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  // MENQOL Styles
+  menqolSection: {
+    paddingHorizontal: SPACING.xl,
+    paddingBottom: SPACING.xxl,
+  },
+  menqolHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.lg,
+  },
+  menqolTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  menqolTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.heading.italic,
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
+  menqolBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: RADIUS.sm,
+  },
+  menqolBadgeText: {
+    fontSize: 11,
+    fontFamily: FONTS.body.bold,
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  menqolCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+  },
+  menqolScoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    marginBottom: SPACING.sm,
+  },
+  menqolScoreValue: {
+    fontSize: 56,
+    fontFamily: FONTS.heading.regular,
+    color: COLORS.primary,
+    letterSpacing: -2,
+  },
+  menqolScoreMax: {
+    fontSize: 24,
+    fontFamily: FONTS.body.regular,
+    color: COLORS.textSecondary,
+    marginLeft: 4,
+  },
+  menqolInterpretation: {
+    fontSize: 15,
+    fontFamily: FONTS.body.medium,
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: SPACING.xl,
+  },
+  menqolDomains: {
+    gap: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  menqolDomain: {
+    gap: SPACING.xs,
+  },
+  menqolDomainHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  menqolDomainLabel: {
+    fontSize: 13,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.text,
+  },
+  menqolDomainScore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  menqolDomainBar: {
+    flex: 1,
+    height: 8,
+    backgroundColor: COLORS.gray[200],
+    borderRadius: RADIUS.sm,
+    overflow: 'hidden',
+  },
+  menqolDomainProgress: {
+    height: '100%',
+    borderRadius: RADIUS.sm,
+  },
+  menqolDomainValue: {
+    fontSize: 13,
+    fontFamily: FONTS.body.bold,
+    minWidth: 35,
+    textAlign: 'right',
+  },
+  menqolRecommendation: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primaryLight,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+  },
+  menqolRecommendationText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: FONTS.body.regular,
+    color: COLORS.text,
+    lineHeight: 18,
   },
 });
