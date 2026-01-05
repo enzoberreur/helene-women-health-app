@@ -101,11 +101,15 @@ export default function ProfileScreen({ navigation, user }) {
         .limit(1)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      // Ignorer l'erreur si la table n'existe pas encore (migration pas exécutée)
+      if (error && error.code !== 'PGRST116' && error.code !== '42P01') {
+        console.error('Erreur chargement traitement:', error);
+      }
 
       setTreatment(data);
     } catch (error) {
-      console.error('Erreur chargement traitement:', error);
+      // Erreur silencieuse pour ne pas bloquer le reste de l'app
+      console.log('Table hormone_treatment pas encore créée (migration en attente)');
     }
   };
 
