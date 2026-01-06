@@ -44,11 +44,11 @@ export default function DailyCheckInScreen({ navigation, user }) {
   const moodOptions = useMemo(() => {
     const labels = td?.moodOptions || {};
     return [
-      { value: 1, icon: 'sad', label: labels?.veryLow ?? 'Very low', color: '#F56565' },
-      { value: 2, icon: 'sad-outline', label: labels?.low ?? 'Low', color: '#ED8936' },
-      { value: 3, icon: 'remove-circle-outline', label: labels?.neutral ?? 'Neutral', color: '#718096' },
-      { value: 4, icon: 'happy-outline', label: labels?.good ?? 'Good', color: '#48BB78' },
-      { value: 5, icon: 'happy', label: labels?.excellent ?? 'Excellent', color: '#38A169' },
+      { value: 1, icon: 'sad', label: labels?.veryLow ?? 'Very low', color: COLORS.error },
+      { value: 2, icon: 'sad-outline', label: labels?.low ?? 'Low', color: COLORS.warning },
+      { value: 3, icon: 'remove-circle-outline', label: labels?.neutral ?? 'Neutral', color: COLORS.gray[500] },
+      { value: 4, icon: 'happy-outline', label: labels?.good ?? 'Good', color: COLORS.primary },
+      { value: 5, icon: 'happy', label: labels?.excellent ?? 'Excellent', color: COLORS.success },
     ];
   }, [td]);
 
@@ -175,13 +175,12 @@ export default function DailyCheckInScreen({ navigation, user }) {
 
       // Message personnalisé avec encouragement
       const alertMessage = sentimentAnalysis
-        ? (td?.savedMessageWithEncouragement ?? 'Your daily check-in has been saved.\n\n{emoji} {message}')
-            .replace('{emoji}', sentimentAnalysis.emoji)
+        ? (td?.savedMessageWithEncouragement ?? 'Your daily check-in has been saved.\n\n{message}')
             .replace('{message}', encouragementMessage)
         : (td?.savedMessage ?? 'Your daily check-in has been saved.');
 
       Alert.alert(
-        td?.savedTitle ?? '✅ Saved!',
+        td?.savedTitle ?? 'Saved',
         alertMessage,
         [
           {
@@ -225,47 +224,65 @@ export default function DailyCheckInScreen({ navigation, user }) {
           {/* Mood */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{td?.moodQuestion ?? 'How are you feeling today?'}</Text>
-            <View style={styles.moodContainer}>
-              {moodOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[styles.moodButton, mood === option.value && styles.moodButtonSelected]}
-                  onPress={() => setMood(option.value)}
-                >
-                  <View style={[
-                    styles.moodIconContainer,
-                    mood === option.value && { backgroundColor: option.color }
-                  ]}>
-                    <Ionicons 
-                      name={option.icon} 
-                      size={28} 
-                      color={mood === option.value ? COLORS.white : option.color} 
-                    />
-                  </View>
-                  <Text style={[
-                    styles.moodLabel,
-                    mood === option.value && styles.moodLabelSelected
-                  ]}>{option.label}</Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.groupContainer}>
+              <View style={styles.moodRow}>
+                {moodOptions.map((option, index) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.moodPill,
+                      index !== moodOptions.length - 1 && styles.moodPillDivider,
+                      mood === option.value && styles.moodPillSelected,
+                    ]}
+                    onPress={() => setMood(option.value)}
+                    activeOpacity={0.85}
+                  >
+                    <View
+                      style={[
+                        styles.moodIconCircle,
+                        mood === option.value && { backgroundColor: option.color },
+                      ]}
+                    >
+                      <Ionicons
+                        name={option.icon}
+                        size={20}
+                        color={mood === option.value ? COLORS.white : option.color}
+                      />
+                    </View>
+                    <Text
+                      style={[styles.moodPillLabel, mood === option.value && styles.moodPillLabelSelected]}
+                      numberOfLines={2}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           </View>
 
           {/* Energy & Sleep */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{td?.energyTitle ?? 'Energy level'}</Text>
-            <View style={styles.scaleContainer}>
-              {[1, 2, 3, 4, 5].map((value) => (
-                <TouchableOpacity
-                  key={value}
-                  style={[styles.scaleButton, energyLevel === value && styles.scaleButtonSelected]}
-                  onPress={() => setEnergyLevel(value)}
-                >
-                  <Text style={[styles.scaleText, energyLevel === value && styles.scaleTextSelected]}>
-                    {value}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.groupContainer}>
+              <View style={styles.segmentRow}>
+                {[1, 2, 3, 4, 5].map((value, index, arr) => (
+                  <TouchableOpacity
+                    key={value}
+                    style={[
+                      styles.segment,
+                      index !== arr.length - 1 && styles.segmentDivider,
+                      energyLevel === value && styles.segmentSelected,
+                    ]}
+                    onPress={() => setEnergyLevel(value)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[styles.segmentText, energyLevel === value && styles.segmentTextSelected]}>
+                      {value}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
             <View style={styles.scaleLabels}>
               <Text style={styles.scaleLabel}>{td?.energyLow ?? 'Very low'}</Text>
@@ -275,18 +292,25 @@ export default function DailyCheckInScreen({ navigation, user }) {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{td?.sleepTitle ?? 'Sleep quality'}</Text>
-            <View style={styles.scaleContainer}>
-              {[1, 2, 3, 4, 5].map((value) => (
-                <TouchableOpacity
-                  key={value}
-                  style={[styles.scaleButton, sleepQuality === value && styles.scaleButtonSelected]}
-                  onPress={() => setSleepQuality(value)}
-                >
-                  <Text style={[styles.scaleText, sleepQuality === value && styles.scaleTextSelected]}>
-                    {value}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.groupContainer}>
+              <View style={styles.segmentRow}>
+                {[1, 2, 3, 4, 5].map((value, index, arr) => (
+                  <TouchableOpacity
+                    key={value}
+                    style={[
+                      styles.segment,
+                      index !== arr.length - 1 && styles.segmentDivider,
+                      sleepQuality === value && styles.segmentSelected,
+                    ]}
+                    onPress={() => setSleepQuality(value)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[styles.segmentText, sleepQuality === value && styles.segmentTextSelected]}>
+                      {value}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
             <View style={styles.scaleLabels}>
               <Text style={styles.scaleLabel}>{td?.sleepLow ?? 'Very poor'}</Text>
@@ -297,83 +321,105 @@ export default function DailyCheckInScreen({ navigation, user }) {
           {/* Physical Symptoms */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{td?.physicalSymptoms ?? 'Physical symptoms'}</Text>
-            {PHYSICAL_SYMPTOMS.map((symptom) => (
-              <View key={symptom.id} style={styles.symptomRow}>
-                <View style={styles.symptomHeader}>
-                  <Ionicons name={symptom.icon} size={20} color={COLORS.primary} />
-                  <Text style={styles.symptomLabel}>{getSymptomLabel(symptom.id)}</Text>
-                </View>
-                <View style={styles.intensityContainer}>
-                  {intensityOptions.map((option) => (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[
-                        styles.intensityButton,
-                        physicalSymptoms[symptom.id] === option.value && styles.intensityButtonSelected,
-                      ]}
-                      onPress={() => updateSymptom('physical', symptom.id, option.value)}
-                    >
-                      <Text
+            <View style={styles.groupContainer}>
+              {PHYSICAL_SYMPTOMS.map((symptom, index) => (
+                <View
+                  key={symptom.id}
+                  style={[styles.symptomRow, index !== PHYSICAL_SYMPTOMS.length - 1 && styles.symptomRowDivider]}
+                >
+                  <View style={styles.symptomHeader}>
+                    <View style={styles.symptomIconBadge}>
+                      <Ionicons name={symptom.icon} size={16} color={COLORS.primary} />
+                    </View>
+                    <Text style={styles.symptomLabel}>{getSymptomLabel(symptom.id)}</Text>
+                  </View>
+                  <View style={styles.intensitySegmented}>
+                    {intensityOptions.map((option, i, arr) => (
+                      <TouchableOpacity
+                        key={option.value}
                         style={[
-                          styles.intensityText,
-                          physicalSymptoms[symptom.id] === option.value && styles.intensityTextSelected,
+                          styles.intensitySegment,
+                          i !== arr.length - 1 && styles.intensitySegmentDivider,
+                          physicalSymptoms[symptom.id] === option.value && styles.intensitySegmentSelected,
                         ]}
+                        onPress={() => updateSymptom('physical', symptom.id, option.value)}
+                        activeOpacity={0.85}
                       >
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.intensitySegmentText,
+                            physicalSymptoms[symptom.id] === option.value && styles.intensitySegmentTextSelected,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
 
           {/* Mental Symptoms */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{td?.mentalSymptoms ?? 'Mental & emotional state'}</Text>
-            {MENTAL_SYMPTOMS.map((symptom) => (
-              <View key={symptom.id} style={styles.symptomRow}>
-                <View style={styles.symptomHeader}>
-                  <Ionicons name={symptom.icon} size={20} color={COLORS.primary} />
-                  <Text style={styles.symptomLabel}>{getSymptomLabel(symptom.id)}</Text>
-                </View>
-                <View style={styles.intensityContainer}>
-                  {intensityOptions.map((option) => (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[
-                        styles.intensityButton,
-                        mentalSymptoms[symptom.id] === option.value && styles.intensityButtonSelected,
-                      ]}
-                      onPress={() => updateSymptom('mental', symptom.id, option.value)}
-                    >
-                      <Text
+            <View style={styles.groupContainer}>
+              {MENTAL_SYMPTOMS.map((symptom, index) => (
+                <View
+                  key={symptom.id}
+                  style={[styles.symptomRow, index !== MENTAL_SYMPTOMS.length - 1 && styles.symptomRowDivider]}
+                >
+                  <View style={styles.symptomHeader}>
+                    <View style={styles.symptomIconBadge}>
+                      <Ionicons name={symptom.icon} size={16} color={COLORS.primary} />
+                    </View>
+                    <Text style={styles.symptomLabel}>{getSymptomLabel(symptom.id)}</Text>
+                  </View>
+                  <View style={styles.intensitySegmented}>
+                    {intensityOptions.map((option, i, arr) => (
+                      <TouchableOpacity
+                        key={option.value}
                         style={[
-                          styles.intensityText,
-                          mentalSymptoms[symptom.id] === option.value && styles.intensityTextSelected,
+                          styles.intensitySegment,
+                          i !== arr.length - 1 && styles.intensitySegmentDivider,
+                          mentalSymptoms[symptom.id] === option.value && styles.intensitySegmentSelected,
                         ]}
+                        onPress={() => updateSymptom('mental', symptom.id, option.value)}
+                        activeOpacity={0.85}
                       >
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.intensitySegmentText,
+                            mentalSymptoms[symptom.id] === option.value && styles.intensitySegmentTextSelected,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
 
           {/* Notes */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{td?.notesTitle ?? 'Notes (optional)'}</Text>
-            <TextInput
-              style={styles.notesInput}
-              placeholder={td?.notesPlaceholder ?? 'How was your day? Write anything you want...'}
-              placeholderTextColor={COLORS.gray[300]}
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-              numberOfLines={4}
-            />
+            <View style={styles.groupContainer}>
+              <TextInput
+                style={styles.notesInput}
+                placeholder={td?.notesPlaceholder ?? 'How was your day? Write anything you want...'}
+                placeholderTextColor={COLORS.gray[400]}
+                value={notes}
+                onChangeText={setNotes}
+                multiline
+                numberOfLines={4}
+              />
+            </View>
           </View>
         </ScrollView>
 
@@ -411,108 +457,106 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.xl,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
   backButton: {
     padding: SPACING.xs,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '400',
-    fontFamily: FONTS.heading.regular,
+    fontSize: 17,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.text,
-    letterSpacing: -0.3,
-    fontStyle: 'italic',
+    letterSpacing: -0.2,
   },
   placeholder: {
     width: 40,
   },
   scrollContent: {
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xxl,
+    paddingTop: SPACING.xl,
     paddingBottom: SPACING.xxxl,
   },
   section: {
-    marginBottom: SPACING.xxxl,
+    marginBottom: SPACING.xl,
   },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '600',
     fontFamily: FONTS.body.semibold,
     color: COLORS.text,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
     letterSpacing: -0.2,
   },
-  moodContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: SPACING.md,
-  },
-  moodButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: SPACING.xl,
-    paddingHorizontal: SPACING.xs,
-    borderRadius: RADIUS.md,
+  groupContainer: {
     backgroundColor: COLORS.white,
-    borderWidth: 1,
+    borderRadius: RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
+    overflow: 'hidden',
   },
-  moodButtonSelected: {
-    borderColor: COLORS.primary,
+  moodRow: {
+    flexDirection: 'row',
+  },
+  moodPill: {
+    flex: 1,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moodPillDivider: {
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: COLORS.border,
+  },
+  moodPillSelected: {
     backgroundColor: COLORS.primaryLight,
   },
-  moodIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.sm,
+  moodIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.gray[100],
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.gray[100],
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.xs,
   },
-  moodLabel: {
-    fontSize: 11,
-    fontFamily: FONTS.body.medium,
+  moodPillLabel: {
+    fontSize: 10,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.textSecondary,
     textAlign: 'center',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
-  moodLabelSelected: {
+  moodPillLabelSelected: {
     color: COLORS.primary,
-    fontFamily: FONTS.body.semibold,
   },
-  scaleContainer: {
+  segmentRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: SPACING.sm,
   },
-  scaleButton: {
+  segment: {
     flex: 1,
-    aspectRatio: 1,
-    justifyContent: 'center',
+    paddingVertical: SPACING.md,
     alignItems: 'center',
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    justifyContent: 'center',
   },
-  scaleButtonSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+  segmentDivider: {
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: COLORS.border,
   },
-  scaleText: {
-    fontSize: 18,
-    fontWeight: '400',
-    fontFamily: FONTS.heading.regular,
+  segmentSelected: {
+    backgroundColor: COLORS.primaryLight,
+  },
+  segmentText: {
+    fontSize: 16,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.textSecondary,
   },
-  scaleTextSelected: {
-    color: COLORS.white,
+  segmentTextSelected: {
+    color: COLORS.primary,
   },
   scaleLabels: {
     flexDirection: 'row',
@@ -522,55 +566,67 @@ const styles = StyleSheet.create({
   scaleLabel: {
     fontSize: 11,
     fontFamily: FONTS.body.regular,
-    color: COLORS.textTertiary,
+    color: COLORS.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   symptomRow: {
-    marginBottom: SPACING.xl,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+  },
+  symptomRowDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: COLORS.border,
   },
   symptomHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
     gap: SPACING.sm,
+  },
+  symptomIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   symptomLabel: {
     fontSize: 15,
     fontFamily: FONTS.body.medium,
     color: COLORS.text,
   },
-  intensityContainer: {
+  intensitySegmented: {
     flexDirection: 'row',
-    gap: SPACING.sm,
-  },
-  intensityButton: {
-    flex: 1,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.sm,
-    backgroundColor: COLORS.white,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  intensityButtonSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  intensityText: {
-    fontSize: 13,
-    fontWeight: '500',
-    fontFamily: FONTS.body.medium,
-    color: COLORS.textSecondary,
-  },
-  intensityTextSelected: {
-    color: COLORS.white,
-  },
-  notesInput: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,
+    overflow: 'hidden',
+  },
+  intensitySegment: {
+    flex: 1,
+    paddingVertical: SPACING.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.white,
+  },
+  intensitySegmentDivider: {
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: COLORS.border,
+  },
+  intensitySegmentSelected: {
+    backgroundColor: COLORS.primaryLight,
+  },
+  intensitySegmentText: {
+    fontSize: 12,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.textSecondary,
+  },
+  intensitySegmentTextSelected: {
+    color: COLORS.primary,
+  },
+  notesInput: {
     paddingVertical: SPACING.lg,
     paddingHorizontal: SPACING.lg,
     fontSize: 15,
@@ -584,14 +640,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.xl,
     backgroundColor: COLORS.white,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: COLORS.border,
   },
   saveButton: {
     backgroundColor: COLORS.primary,
     paddingVertical: SPACING.lg,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     alignItems: 'center',
+    ...SHADOWS.sm,
   },
   saveButtonDisabled: {
     opacity: 0.5,
@@ -601,6 +658,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     fontFamily: FONTS.body.semibold,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
 });

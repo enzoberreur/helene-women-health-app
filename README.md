@@ -1,52 +1,79 @@
-# Hélène - iOS App Landing Page
+# Hélène — Women’s Health Companion (Perimenopause & Menopause)
 
-A minimalist landing page for the Hélène wellness app built with React Native and Expo.
+<p align="center">
+  <img src="screenshot/1.png" width="180" />
+  <img src="screenshot/2.png" width="180" />
+  <img src="screenshot/3.png" width="180" />
+</p>
+<p align="center">
+  <img src="screenshot/4.png" width="180" />
+  <img src="screenshot/5.png" width="180" />
+  <img src="screenshot/6.png" width="180" />
+</p>
 
-## Getting Started
+Hélène is a mobile app designed to support women through perimenopause and menopause.
+It turns daily check-ins into clear trends, practical insights, and a calmer, more informed experience—without adding friction or noise.
 
-### Installation
+## The problem
+Symptoms during this transition can be wide-ranging (sleep, mood, energy, hot flashes, anxiety, brain fog…), fluctuate daily, and are hard to summarize for yourself—or for a clinician.
+Most tools either feel too clinical, too generic, or don’t connect the dots over time.
 
+## How Hélène helps
+- **Fast daily check-in**: mood, energy, sleep, symptoms, and optional notes.
+- **Trends that make sense**: charts and summaries over the last weeks.
+- **Emotional journal**: note history + sentiment trends for your written reflections.
+- **Personalization**: menopause stage + goals, used to tailor the experience.
+- **Medical PDF export**: a concise report you can share with your clinician.
+- **Reminders**: optional daily notifications.
+- **AI companion (optional)**: empathetic guidance and education (demo mode supported).
+
+## Technical implementation
+- **App**: React Native (Expo)
+- **Backend**: Supabase (Auth + Postgres)
+- **Analytics**: computed trends + sentiment analysis from check-in history
+- **Charts**: `react-native-chart-kit`
+- **Reports**: `expo-print` + `expo-sharing`
+- **Notifications**: `expo-notifications`
+- **AI**: Gemini API (can be disabled / demo mode)
+- **i18n**: English + French
+
+## Run locally
 ```bash
 npm install
+npm start
 ```
 
-### Running the App
-
+Then launch on a device/simulator:
 ```bash
-# Start Expo
-npm start
-
-# Run on iOS
 npm run ios
-
-# Run on Android
+# or
 npm run android
 ```
 
-## Design Features
+## Configure Supabase & AI
+This repo currently includes placeholder / development credentials in code.
+For a real deployment, move secrets to environment variables and update the client initializers:
 
-- **Minimalist Design**: Clean, spacious layout following the brand guidelines
-- **Brand Colors**: 
-  - Primary: Hélène Pink (#FF006E)
-  - Secondary: Deep Black (#111827)
-  - Base: Pure White (#FFFFFF)
-- **Typography**: Times New Roman (italic) for accent text, System font for body
-- **Key Elements**:
-  - Elegant hero section with gradient decoration
-  - Feature cards highlighting app benefits
-  - Clear call-to-action buttons
-  - Smooth scrolling experience
+- Supabase client: `src/lib/supabase.js`
+- Gemini client: `src/lib/gemini.js`
 
-## Project Structure
+## Database (Supabase)
+SQL scripts are included to bootstrap and evolve the schema:
+- `supabase-schema-v2.sql`
+- `supabase-trigger-v2.sql`
+- `supabase-daily-logs.sql`
+- `supabase-sentiment-migration.sql`
+- `supabase-treatment-migration.sql`
 
+## Project structure
 ```
-Helene/
-├── App.js                      # Main app entry
+.
+├── App.js
 ├── src/
-│   ├── screens/
-│   │   └── LandingPage.js     # Landing page component
-│   └── constants/
-│       └── theme.js           # Brand colors and styling constants
-├── app.json                   # Expo configuration
-└── package.json               # Dependencies
+│   ├── screens/          # App screens (Home, Check-in, Trends, Journal, Profile...)
+│   ├── lib/              # Supabase + AI clients
+│   ├── utils/            # Insights, sentiment, notifications, PDF generation
+│   ├── i18n/             # Translations
+│   └── constants/        # Theme tokens
+└── screenshot/           # App screenshots used in this README
 ```

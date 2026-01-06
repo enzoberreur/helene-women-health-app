@@ -124,13 +124,13 @@ export default function HomeScreen({ navigation }) {
     if (moodValue >= 4.5) return { name: 'happy', color: COLORS.success };
     if (moodValue >= 3.5) return { name: 'happy-outline', color: COLORS.primary };
     if (moodValue >= 2.5) return { name: 'remove-circle-outline', color: COLORS.warning };
-    if (moodValue >= 1.5) return { name: 'sad-outline', color: '#F97316' };
+    if (moodValue >= 1.5) return { name: 'sad-outline', color: COLORS.warning };
     return { name: 'sad', color: COLORS.error };
   };
 
   const getSleepIcon = (sleep) => {
     const sleepValue = parseFloat(sleep);
-    if (sleepValue >= 8) return { name: 'moon', color: '#8B5CF6' };
+    if (sleepValue >= 8) return { name: 'moon', color: COLORS.primary };
     if (sleepValue >= 6) return { name: 'moon-outline', color: COLORS.primary };
     if (sleepValue >= 4) return { name: 'partly-sunny-outline', color: COLORS.warning };
     return { name: 'alert-circle-outline', color: COLORS.error };
@@ -174,9 +174,9 @@ export default function HomeScreen({ navigation }) {
           >
             <View style={styles.primaryCardHeader}>
               <View style={styles.cardIconContainer}>
-                <Ionicons name="create-outline" size={24} color={COLORS.white} />
+                <Ionicons name="create-outline" size={22} color={COLORS.primary} />
               </View>
-              <Ionicons name="arrow-forward" size={22} color="rgba(255,255,255,0.8)" />
+              <Ionicons name="arrow-forward" size={20} color={COLORS.textSecondary} />
             </View>
             <Text style={styles.primaryCardTitle}>{t.home.dailyCheckIn}</Text>
             <Text style={styles.primaryCardSubtitle}>
@@ -267,47 +267,58 @@ export default function HomeScreen({ navigation }) {
               {/* Insights automatiques */}
               {insights.length > 0 && (
                 <View style={styles.insightsContainer}>
-                  <Text style={styles.insightsTitle}>{t.home.weeklyInsightsTitle}</Text>
-                  {insights.map((insight) => (
-                    <View 
-                      key={insight.id} 
-                      style={[
-                        styles.insightAutoCard,
-                        insight.type === 'positive' && styles.insightPositive,
-                        insight.type === 'warning' && styles.insightWarning,
-                      ]}
-                    >
-                      <View style={styles.insightAutoIcon}>
-                        <Ionicons 
-                          name={insight.icon} 
-                          size={20} 
-                          color={
-                            insight.type === 'positive' ? COLORS.success :
-                            insight.type === 'warning' ? COLORS.warning :
-                            COLORS.primary
-                          } 
-                        />
+                  <Text style={styles.sectionLabel}>{t.home.weeklyInsightsTitle}</Text>
+                  <View style={styles.groupContainer}>
+                    {insights.map((insight, index) => (
+                      <View
+                        key={insight.id}
+                        style={[
+                          styles.groupRow,
+                          index !== insights.length - 1 && styles.groupRowDivider,
+                        ]}
+                      >
+                        <View style={styles.rowIconBadge}>
+                          <Ionicons
+                            name={insight.icon}
+                            size={18}
+                            color={
+                              insight.type === 'positive' ? COLORS.success :
+                              insight.type === 'warning' ? COLORS.warning :
+                              COLORS.primary
+                            }
+                          />
+                        </View>
+                        <View style={styles.rowMain}>
+                          <Text style={styles.rowTitle}>{insight.title}</Text>
+                          <Text style={styles.rowSubtitle} numberOfLines={2}>
+                            {insight.message}
+                          </Text>
+                        </View>
+                        {!!insight.value && (
+                          <Text style={styles.rowValue} numberOfLines={1}>
+                            {insight.value}
+                          </Text>
+                        )}
                       </View>
-                      <View style={styles.insightAutoContent}>
-                        <Text style={styles.insightAutoTitle}>{insight.title}</Text>
-                        <Text style={styles.insightAutoMessage}>{insight.message}</Text>
-                      </View>
-                      <Text style={styles.insightAutoValue}>{insight.value}</Text>
-                    </View>
-                  ))}
+                    ))}
+                  </View>
                 </View>
               )}
 
               {stats.topSymptom && (
-                <View style={styles.insightCard}>
-                  <View style={styles.insightIcon}>
-                    <Ionicons name="pulse" size={20} color={COLORS.primary} />
-                  </View>
-                  <View style={styles.insightContent}>
-                    <Text style={styles.insightTitle}>{t.home.mostFrequentSymptom}</Text>
-                    <Text style={styles.insightText}>
-                      {getSymptomLabel(stats.topSymptom)}
-                    </Text>
+                <View style={styles.singleRowContainer}>
+                  <View style={styles.groupContainer}>
+                    <View style={styles.groupRow}>
+                      <View style={styles.rowIconBadge}>
+                        <Ionicons name="pulse" size={18} color={COLORS.primary} />
+                      </View>
+                      <View style={styles.rowMain}>
+                        <Text style={styles.rowTitle}>{t.home.mostFrequentSymptom}</Text>
+                        <Text style={styles.rowSubtitle} numberOfLines={1}>
+                          {getSymptomLabel(stats.topSymptom)}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
               )}
@@ -317,46 +328,47 @@ export default function HomeScreen({ navigation }) {
 
         {/* Action secondaire */}
         <View style={styles.chatSection}>
-          <TouchableOpacity
-            style={styles.chatCard}
-            onPress={() => {
-              hapticFeedback.light();
-              navigation.navigate('chat');
-            }}
-            activeOpacity={0.8}
-          >
-            <View style={styles.chatCardContent}>
-              <View style={styles.chatIconBadge}>
-                <Ionicons name="sparkles" size={20} color={COLORS.primary} />
+          <View style={styles.groupContainer}>
+            <TouchableOpacity
+              style={[styles.groupRow, styles.groupRowTouchable, styles.groupRowDivider]}
+              onPress={() => {
+                hapticFeedback.light();
+                navigation.navigate('chat');
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.rowIconBadge}>
+                <Ionicons name="sparkles" size={18} color={COLORS.primary} />
               </View>
-              <Text style={styles.chatCardTitle}>{t.home.talkToHelene}</Text>
-              <Text style={styles.chatCardSubtitle}>
-                {t.home.talkToHeleneSubtitle}
-              </Text>
-            </View>
-            <Ionicons name="arrow-forward" size={22} color={COLORS.text} />
-          </TouchableOpacity>
+              <View style={styles.rowMain}>
+                <Text style={styles.rowTitle}>{t.home.talkToHelene}</Text>
+                <Text style={styles.rowSubtitle} numberOfLines={1}>
+                  {t.home.talkToHeleneSubtitle}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.gray[400]} />
+            </TouchableOpacity>
 
-          {/* Journal Émotionnel */}
-          <TouchableOpacity
-            style={[styles.chatCard, { marginTop: SPACING.md }]}
-            onPress={() => {
-              hapticFeedback.light();
-              navigation.navigate('journal');
-            }}
-            activeOpacity={0.8}
-          >
-            <View style={styles.chatCardContent}>
-              <View style={[styles.chatIconBadge, { backgroundColor: '#FCECEF' }]}>
-                <Ionicons name="heart" size={20} color={COLORS.primary} />
+            <TouchableOpacity
+              style={[styles.groupRow, styles.groupRowTouchable]}
+              onPress={() => {
+                hapticFeedback.light();
+                navigation.navigate('journal');
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.rowIconBadge}>
+                <Ionicons name="heart" size={18} color={COLORS.primary} />
               </View>
-              <Text style={styles.chatCardTitle}>{t.home.emotionalJournal}</Text>
-              <Text style={styles.chatCardSubtitle}>
-                {t.home.emotionalJournalSubtitle}
-              </Text>
-            </View>
-            <Ionicons name="arrow-forward" size={22} color={COLORS.text} />
-          </TouchableOpacity>
+              <View style={styles.rowMain}>
+                <Text style={styles.rowTitle}>{t.home.emotionalJournal}</Text>
+                <Text style={styles.rowSubtitle} numberOfLines={1}>
+                  {t.home.emotionalJournalSubtitle}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.gray[400]} />
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -382,47 +394,47 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xxl,
-    paddingBottom: SPACING.lg,
-    backgroundColor: COLORS.white,
+    paddingTop: SPACING.xl,
+    paddingBottom: SPACING.md,
+    backgroundColor: COLORS.background,
   },
   headerContent: {
     flex: 1,
   },
   greeting: {
-    fontSize: 38,
-    fontFamily: FONTS.heading.italic,
+    fontSize: 34,
+    fontFamily: FONTS.heading.regular,
     color: COLORS.text,
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: FONTS.body.regular,
     color: COLORS.textSecondary,
-    marginTop: SPACING.sm,
+    marginTop: SPACING.xs,
     lineHeight: 22,
   },
   profileButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.gray[100],
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   mainSection: {
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xl,
+    paddingTop: SPACING.lg,
   },
   primaryCard: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.white,
     borderRadius: RADIUS.lg,
-    padding: SPACING.xl,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
   },
   primaryCardHeader: {
     flexDirection: 'row',
@@ -434,27 +446,26 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   primaryCardTitle: {
-    fontSize: 22,
-    fontFamily: FONTS.heading.italic,
-    color: COLORS.white,
+    fontSize: 18,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.text,
     marginBottom: SPACING.xs,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   primaryCardSubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: FONTS.body.regular,
-    color: COLORS.white,
-    opacity: 0.9,
-    lineHeight: 21,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
   },
   statsSection: {
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xxl,
+    paddingTop: SPACING.xl,
   },
   statsSectionHeader: {
     flexDirection: 'row',
@@ -463,10 +474,10 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontFamily: FONTS.heading.italic,
+    fontSize: 17,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.text,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   viewAllButton: {
     flexDirection: 'row',
@@ -487,79 +498,80 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
     marginBottom: SPACING.lg,
   },
-  insightsTitle: {
-    fontSize: 16,
+  sectionLabel: {
+    fontSize: 13,
     fontFamily: FONTS.body.semibold,
-    color: COLORS.text,
-    marginBottom: SPACING.md,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
-  insightAutoCard: {
+  groupContainer: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  groupRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.primary,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
   },
-  insightPositive: {
-    borderLeftColor: COLORS.success,
-    backgroundColor: '#F0FDF4',
+  groupRowTouchable: {
+    minHeight: 56,
   },
-  insightWarning: {
-    borderLeftColor: COLORS.warning,
-    backgroundColor: '#FFFBEB',
+  groupRowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
   },
-  insightAutoIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.white,
+  rowIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: SPACING.sm,
+    marginRight: SPACING.md,
   },
-  insightAutoContent: {
+  rowMain: {
     flex: 1,
+    minWidth: 0,
   },
-  insightAutoTitle: {
-    fontSize: 13,
+  rowTitle: {
+    fontSize: 16,
     fontFamily: FONTS.body.semibold,
     color: COLORS.text,
     marginBottom: 2,
   },
-  insightAutoMessage: {
-    fontSize: 13,
+  rowSubtitle: {
+    fontSize: 14,
     fontFamily: FONTS.body.regular,
     color: COLORS.textSecondary,
     lineHeight: 18,
   },
-  insightAutoValue: {
-    fontSize: 14,
-    fontFamily: FONTS.body.bold,
+  rowValue: {
+    fontSize: 15,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.text,
+    marginLeft: SPACING.md,
+  },
+  singleRowContainer: {
+    marginBottom: SPACING.lg,
   },
   statCard: {
     backgroundColor: COLORS.white,
     borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
+    padding: SPACING.md,
     flex: 1,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
   },
   statValue: {
-    fontSize: 26,
-    fontFamily: FONTS.heading.regular,
+    fontSize: 22,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.text,
     marginTop: SPACING.sm,
     marginBottom: SPACING.xs,
@@ -573,48 +585,14 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  insightCard: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  insightIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  insightContent: {
-    flex: 1,
-    marginLeft: SPACING.md,
-  },
-  insightTitle: {
-    fontSize: 13,
-    fontFamily: FONTS.body.semibold,
-    color: COLORS.text,
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  insightText: {
-    fontSize: 15,
-    fontFamily: FONTS.body.medium,
-    color: COLORS.text,
-    lineHeight: 21,
-  },
   emptyState: {
     backgroundColor: COLORS.white,
     borderRadius: RADIUS.xl,
-    padding: SPACING.xxxl,
+    padding: SPACING.xxl,
     alignItems: 'center',
     marginVertical: SPACING.lg,
-    borderWidth: 2,
-    borderColor: COLORS.primaryLight,
-    borderStyle: 'dashed',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
   },
   emptyStateIconContainer: {
     marginBottom: SPACING.lg,
@@ -626,19 +604,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    ...SHADOWS.sm,
   },
   emptyStateTitle: {
-    fontSize: 24,
-    fontFamily: FONTS.heading.italic,
+    fontSize: 20,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.text,
     marginBottom: SPACING.sm,
     textAlign: 'center',
-    letterSpacing: -0.5,
+    letterSpacing: -0.2,
   },
   emptyStateText: {
     fontSize: 15,
@@ -657,11 +631,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    ...SHADOWS.sm,
   },
   emptyStateCTAText: {
     fontSize: 16,
@@ -670,41 +640,7 @@ const styles = StyleSheet.create({
   },
   chatSection: {
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xxl,
+    paddingTop: SPACING.xl,
     paddingBottom: SPACING.xxl,
-  },
-  chatCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  chatCardContent: {
-    flex: 1,
-  },
-  chatIconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  chatCardTitle: {
-    fontSize: 18,
-    fontFamily: FONTS.heading.italic,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-    letterSpacing: -0.3,
-  },
-  chatCardSubtitle: {
-    fontSize: 14,
-    fontFamily: FONTS.body.regular,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
   },
 });

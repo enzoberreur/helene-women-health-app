@@ -129,7 +129,7 @@ export const generateWeeklyInsights = (logs, language = 'fr') => {
             .replace('Vos symptômes sont plus fréquents le soir', 'Your symptoms are more frequent in the evening')
             .replace('Vos symptômes sont plus fréquents le matin', 'Your symptoms are more frequent in the morning')
         : morningPattern,
-      value: '🕐',
+      value: '',
     });
   }
 

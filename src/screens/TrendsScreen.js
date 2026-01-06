@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart, BarChart } from 'react-native-chart-kit';
 import { supabase } from '../lib/supabase';
-import { COLORS, FONTS, SPACING, RADIUS } from '../constants/theme';
+import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 import { calculateMenqolScore } from '../utils/menqolCalculator';
 import { LanguageContext } from '../../App';
 
@@ -110,6 +110,17 @@ export default function TrendsScreen({ navigation, user }) {
     return template.replace('{period}', String(period));
   };
 
+  // Chart-kit needs an explicit width; use the full card width.
+  // (Chart-kit already adds internal padding; extra container padding makes it look cramped.)
+  const chartWidth = Math.max(0, width - (SPACING.xl * 2));
+
+  const formatBarLabel = (label) => {
+    const text = String(label ?? '');
+    const parts = text.split(' ').filter(Boolean);
+    if (parts.length <= 1) return text;
+    return `${parts[0]}\n${parts.slice(1).join(' ')}`;
+  };
+
   const chartConfig = {
     backgroundColor: COLORS.white,
     backgroundGradientFrom: COLORS.white,
@@ -117,8 +128,12 @@ export default function TrendsScreen({ navigation, user }) {
     decimalPlaces: 1,
     color: (opacity = 1) => `rgba(232, 62, 115, ${opacity})`,
     labelColor: (opacity = 1) => `rgba(74, 85, 104, ${opacity})`,
+    paddingRight: 16,
     style: {
       borderRadius: RADIUS.lg,
+    },
+    propsForLabels: {
+      fontSize: 11,
     },
     propsForDots: {
       r: '4',
@@ -162,20 +177,20 @@ export default function TrendsScreen({ navigation, user }) {
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Period Selector */}
-        <View style={styles.periodSelector}>
+        <View style={styles.segmentedControl}>
           <TouchableOpacity
-            style={[styles.periodButton, period === 7 && styles.periodButtonActive]}
+            style={[styles.segmentButton, period === 7 && styles.segmentButtonActive]}
             onPress={() => setPeriod(7)}
           >
-            <Text style={[styles.periodButtonText, period === 7 && styles.periodButtonTextActive]}>
+            <Text style={[styles.segmentButtonText, period === 7 && styles.segmentButtonTextActive]}>
               {tt?.period7days ?? '7 days'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.periodButton, period === 30 && styles.periodButtonActive]}
+            style={[styles.segmentButton, period === 30 && styles.segmentButtonActive]}
             onPress={() => setPeriod(30)}
           >
-            <Text style={[styles.periodButtonText, period === 30 && styles.periodButtonTextActive]}>
+            <Text style={[styles.segmentButtonText, period === 30 && styles.segmentButtonTextActive]}>
               {tt?.period30days ?? '30 days'}
             </Text>
           </TouchableOpacity>
@@ -195,10 +210,7 @@ export default function TrendsScreen({ navigation, user }) {
             {data.menqolScore && data.menqolScore.globalScore > 0 && (
               <View style={styles.menqolSection}>
                 <View style={styles.menqolHeader}>
-                  <View style={styles.menqolTitleContainer}>
-                    <Ionicons name="medical" size={24} color={COLORS.primary} />
-                    <Text style={styles.menqolTitle}>{tt?.menqolScore ?? 'MENQOL Score'}</Text>
-                  </View>
+                  <Text style={styles.sectionLabel}>{tt?.menqolScore ?? 'MENQOL Score'}</Text>
                   <View style={styles.menqolBadge}>
                     <Text style={styles.menqolBadgeText}>{tt?.menqolStandardized ?? 'Standardized'}</Text>
                   </View>
@@ -227,10 +239,10 @@ export default function TrendsScreen({ navigation, user }) {
                       };
                       const severityColors = {
                         none: COLORS.gray[300],
-                        mild: '#10B981',
-                        moderate: '#F59E0B',
-                        severe: '#F97316',
-                        very_severe: '#EF4444',
+                        mild: COLORS.success,
+                        moderate: COLORS.warning,
+                        severe: COLORS.warning,
+                        very_severe: COLORS.error,
                       };
 
                       if (data.score === 0) return null;
@@ -284,7 +296,7 @@ export default function TrendsScreen({ navigation, user }) {
                       data: data.moodData,
                     }],
                   }}
-                  width={width - (SPACING.xl * 2)}
+                  width={chartWidth}
                   height={200}
                   chartConfig={chartConfig}
                   bezier
@@ -295,6 +307,7 @@ export default function TrendsScreen({ navigation, user }) {
                   withShadow={false}
                   fromZero
                   segments={5}
+                  yLabelsOffset={-4}
                 />
               </View>
             </View>
@@ -313,7 +326,7 @@ export default function TrendsScreen({ navigation, user }) {
                       data: data.sleepData,
                     }],
                   }}
-                  width={width - (SPACING.xl * 2)}
+                  width={chartWidth}
                   height={200}
                   chartConfig={{
                     ...chartConfig,
@@ -332,6 +345,7 @@ export default function TrendsScreen({ navigation, user }) {
                   withShadow={false}
                   fromZero
                   segments={5}
+                  yLabelsOffset={-4}
                 />
               </View>
             </View>
@@ -346,13 +360,13 @@ export default function TrendsScreen({ navigation, user }) {
                 <View style={styles.chartContainer}>
                   <BarChart
                     data={{
-                      labels: topSymptoms.map(([symptom]) => getSymptomLabel(symptom)),
+                      labels: topSymptoms.map(([symptom]) => formatBarLabel(getSymptomLabel(symptom))),
                       datasets: [{
                         data: topSymptoms.map(([_, count]) => count),
                       }],
                     }}
-                    width={width - (SPACING.xl * 2)}
-                    height={220}
+                    width={chartWidth}
+                    height={250}
                     chartConfig={chartConfig}
                     style={styles.chart}
                     withVerticalLabels={true}
@@ -360,6 +374,10 @@ export default function TrendsScreen({ navigation, user }) {
                     fromZero
                     showValuesOnTopOfBars={true}
                     withInnerLines={false}
+                    verticalLabelRotation={0}
+                    yLabelsOffset={-4}
+                    xLabelsOffset={0}
+                    barPercentage={0.6}
                   />
                 </View>
               </View>
@@ -367,45 +385,50 @@ export default function TrendsScreen({ navigation, user }) {
 
             {/* Insights */}
             <View style={styles.insightsSection}>
-              <Text style={styles.sectionTitle}>{tt?.observations ?? (isEn ? 'Observations' : 'Observations')}</Text>
-              
-              <View style={styles.insightCard}>
-                <View style={styles.insightIcon}>
-                  <Ionicons name="trending-up" size={20} color={COLORS.primary} />
-                </View>
-                <View style={styles.insightContent}>
-                  <Text style={styles.insightTitle}>{tt?.averageMood ?? (isEn ? 'Average mood' : 'Humeur moyenne')}</Text>
-                  <Text style={styles.insightValue}>
+              <Text style={styles.sectionLabel}>{tt?.observations ?? (isEn ? 'Observations' : 'Observations')}</Text>
+
+              <View style={styles.groupContainer}>
+                <View style={[styles.groupRow, styles.groupRowDivider]}>
+                  <View style={styles.rowIconBadge}>
+                    <Ionicons name="trending-up" size={18} color={COLORS.primary} />
+                  </View>
+                  <View style={styles.rowMain}>
+                    <Text style={styles.rowTitle}>{tt?.averageMood ?? (isEn ? 'Average mood' : 'Humeur moyenne')}</Text>
+                  </View>
+                  <Text style={styles.rowValue}>
                     {(data.moodData.reduce((a, b) => a + b, 0) / data.moodData.length).toFixed(1)}/5
                   </Text>
                 </View>
-              </View>
 
-              <View style={styles.insightCard}>
-                <View style={styles.insightIcon}>
-                  <Ionicons name="moon" size={20} color={COLORS.success} />
-                </View>
-                <View style={styles.insightContent}>
-                  <Text style={styles.insightTitle}>{tt?.averageSleep ?? (isEn ? 'Average sleep' : 'Sommeil moyen')}</Text>
-                  <Text style={styles.insightValue}>
+                <View style={[styles.groupRow, topSymptoms.length > 0 && styles.groupRowDivider]}>
+                  <View style={styles.rowIconBadge}>
+                    <Ionicons name="moon" size={18} color={COLORS.success} />
+                  </View>
+                  <View style={styles.rowMain}>
+                    <Text style={styles.rowTitle}>{tt?.averageSleep ?? (isEn ? 'Average sleep' : 'Sommeil moyen')}</Text>
+                  </View>
+                  <Text style={styles.rowValue}>
                     {(data.sleepData.reduce((a, b) => a + b, 0) / data.sleepData.length).toFixed(1)}/10
                   </Text>
                 </View>
-              </View>
 
-              {topSymptoms.length > 0 && (
-                <View style={styles.insightCard}>
-                  <View style={styles.insightIcon}>
-                    <Ionicons name="pulse" size={20} color={COLORS.warning} />
-                  </View>
-                  <View style={styles.insightContent}>
-                    <Text style={styles.insightTitle}>{tt?.mainSymptom ?? (isEn ? 'Main symptom' : 'Symptôme principal')}</Text>
-                    <Text style={styles.insightValue}>
-                      {getSymptomLabel(topSymptoms[0][0])} ({topSymptoms[0][1]} {tt?.days ?? (isEn ? 'days' : 'jours')})
+                {topSymptoms.length > 0 && (
+                  <View style={styles.groupRow}>
+                    <View style={styles.rowIconBadge}>
+                      <Ionicons name="pulse" size={18} color={COLORS.warning} />
+                    </View>
+                    <View style={styles.rowMain}>
+                      <Text style={styles.rowTitle}>{tt?.mainSymptom ?? (isEn ? 'Main symptom' : 'Symptôme principal')}</Text>
+                      <Text style={styles.rowSubtitle} numberOfLines={1}>
+                        {getSymptomLabel(topSymptoms[0][0])}
+                      </Text>
+                    </View>
+                    <Text style={styles.rowValue}>
+                      {topSymptoms[0][1]} {tt?.days ?? (isEn ? 'days' : 'jours')}
                     </Text>
                   </View>
-                </View>
-              )}
+                )}
+              </View>
             </View>
           </>
         )}
@@ -429,9 +452,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.lg,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
   backButton: {
@@ -440,8 +463,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontFamily: FONTS.heading.italic,
+    fontSize: 17,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.text,
     letterSpacing: -0.3,
   },
@@ -451,44 +474,45 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  periodSelector: {
+  segmentedControl: {
     flexDirection: 'row',
-    gap: SPACING.md,
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.lg,
-  },
-  periodButton: {
-    flex: 1,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.md,
+    padding: 2,
+    marginHorizontal: SPACING.xl,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.lg,
     backgroundColor: COLORS.white,
-    borderWidth: 1,
+    borderRadius: RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  periodButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+  segmentButtonActive: {
+    backgroundColor: COLORS.primaryLight,
   },
-  periodButtonText: {
-    fontSize: 15,
-    fontFamily: FONTS.body.medium,
-    color: COLORS.text,
+  segmentButtonText: {
+    fontSize: 14,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.textSecondary,
   },
-  periodButtonTextActive: {
-    color: COLORS.white,
+  segmentButtonTextActive: {
+    color: COLORS.primary,
   },
   chartSection: {
     paddingHorizontal: SPACING.xl,
     paddingBottom: SPACING.xxl,
   },
   chartTitle: {
-    fontSize: 18,
-    fontFamily: FONTS.heading.italic,
+    fontSize: 16,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.text,
     marginBottom: SPACING.xs,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   chartSubtitle: {
     fontSize: 13,
@@ -499,12 +523,11 @@ const styles = StyleSheet.create({
   chartContainer: {
     backgroundColor: COLORS.white,
     borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: 0,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
   },
   chart: {
     borderRadius: RADIUS.md,
@@ -513,64 +536,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
     paddingBottom: SPACING.xxl,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: FONTS.heading.italic,
-    color: COLORS.text,
-    marginBottom: SPACING.lg,
-    letterSpacing: -0.3,
-  },
-  insightCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  insightIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.md,
-  },
-  insightContent: {
-    flex: 1,
-  },
-  insightTitle: {
-    fontSize: 13,
-    fontFamily: FONTS.body.medium,
-    color: COLORS.textSecondary,
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  insightValue: {
-    fontSize: 18,
-    fontFamily: FONTS.heading.regular,
-    color: COLORS.text,
-    letterSpacing: -0.3,
-  },
   emptyState: {
     alignItems: 'center',
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.xxxl * 2,
   },
   emptyStateTitle: {
-    fontSize: 20,
-    fontFamily: FONTS.heading.italic,
+    fontSize: 18,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.text,
     marginTop: SPACING.xl,
     marginBottom: SPACING.sm,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   emptyStateText: {
     fontSize: 15,
@@ -590,41 +567,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: SPACING.lg,
   },
-  menqolTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  menqolTitle: {
-    fontSize: 18,
-    fontFamily: FONTS.heading.italic,
-    color: COLORS.text,
-    letterSpacing: -0.3,
+  sectionLabel: {
+    fontSize: 13,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   menqolBadge: {
-    backgroundColor: '#10B981',
+    backgroundColor: COLORS.primaryLight,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
     borderRadius: RADIUS.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
   },
   menqolBadgeText: {
     fontSize: 11,
     fontFamily: FONTS.body.bold,
-    color: '#FFFFFF',
+    color: COLORS.primary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   menqolCard: {
     backgroundColor: COLORS.white,
     borderRadius: RADIUS.lg,
-    padding: SPACING.xl,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
+    padding: SPACING.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
   },
   menqolScoreContainer: {
     flexDirection: 'row',
@@ -633,13 +604,13 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   menqolScoreValue: {
-    fontSize: 56,
-    fontFamily: FONTS.heading.regular,
+    fontSize: 48,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.primary,
-    letterSpacing: -2,
+    letterSpacing: -1.5,
   },
   menqolScoreMax: {
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: FONTS.body.regular,
     color: COLORS.textSecondary,
     marginLeft: 4,
@@ -694,9 +665,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: SPACING.sm,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: COLORS.white,
     padding: SPACING.md,
     borderRadius: RADIUS.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
   },
   menqolRecommendationText: {
     flex: 1,
@@ -704,5 +677,53 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body.regular,
     color: COLORS.text,
     lineHeight: 18,
+  },
+
+  groupContainer: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  groupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+  },
+  groupRowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  rowIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  rowMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  rowTitle: {
+    fontSize: 16,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.text,
+  },
+  rowSubtitle: {
+    fontSize: 13,
+    fontFamily: FONTS.body.regular,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  rowValue: {
+    fontSize: 15,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.text,
+    marginLeft: SPACING.md,
   },
 });
