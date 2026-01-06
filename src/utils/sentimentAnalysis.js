@@ -136,25 +136,43 @@ export function analyzeSentiment(text) {
  */
 export function generateEncouragementMessage(analysis) {
   const { sentiment, score } = analysis;
+  const language = analysis?.language; // backward-compatible if callers attach it
+  const isEn = (language || 'fr').toLowerCase().startsWith('en');
 
   if (sentiment === 'positive') {
-    const messages = [
-      "C'est merveilleux de vous sentir si bien ! 🌸",
-      "Quelle belle journée ! Continuez sur cette lancée ! ✨",
-      "Votre positivité est inspirante ! 💪",
-      "Gardez cette belle énergie ! 🌟",
-    ];
+    const messages = isEn
+      ? [
+          "It's wonderful to hear you're feeling good! 🌸",
+          "What a lovely day—keep it up! ✨",
+          "Your positivity is inspiring! 💪",
+          "Hold on to that great energy! 🌟",
+        ]
+      : [
+          "C'est merveilleux de vous sentir si bien ! 🌸",
+          "Quelle belle journée ! Continuez sur cette lancée ! ✨",
+          "Votre positivité est inspirante ! 💪",
+          "Gardez cette belle énergie ! 🌟",
+        ];
     return messages[Math.floor(Math.random() * messages.length)];
   } else if (sentiment === 'negative') {
-    const messages = [
-      "Les jours difficiles font partie du parcours. Vous n'êtes pas seule. 💗",
-      "Prenez soin de vous aujourd'hui. Demain sera différent. 🌸",
-      "Votre courage face aux difficultés est admirable. 💪",
-      "N'hésitez pas à en parler avec votre médecin ou un proche. 🤗",
-    ];
+    const messages = isEn
+      ? [
+          "Hard days are part of the journey. You're not alone. 💗",
+          "Be gentle with yourself today—tomorrow can feel different. 🌸",
+          "Your courage through difficulties is admirable. 💪",
+          "If you can, consider talking to your doctor or someone you trust. 🤗",
+        ]
+      : [
+          "Les jours difficiles font partie du parcours. Vous n'êtes pas seule. 💗",
+          "Prenez soin de vous aujourd'hui. Demain sera différent. 🌸",
+          "Votre courage face aux difficultés est admirable. 💪",
+          "N'hésitez pas à en parler avec votre médecin ou un proche. 🤗",
+        ];
     return messages[Math.floor(Math.random() * messages.length)];
   } else {
-    return "Merci de partager votre ressenti. Chaque jour compte. 🌿";
+    return isEn
+      ? "Thank you for sharing how you feel. Every day counts. 🌿"
+      : "Merci de partager votre ressenti. Chaque jour compte. 🌿";
   }
 }
 

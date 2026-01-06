@@ -143,7 +143,8 @@ function calculateDomainScore(log, domain) {
  * @param {Array} logs - Tableau de daily_logs
  * @returns {Object} - Score complet avec détails par domaine
  */
-export function calculateMenqolScore(logs) {
+export function calculateMenqolScore(logs, language = 'fr') {
+  const isEn = (language || 'fr').toLowerCase().startsWith('en');
   if (!logs || logs.length === 0) {
     return {
       globalScore: 0,
@@ -154,7 +155,7 @@ export function calculateMenqolScore(logs) {
         sexual: { score: 0, severity: 'none' },
       },
       logsAnalyzed: 0,
-      interpretation: 'Aucune donnée disponible',
+      interpretation: isEn ? 'No data available' : 'Aucune donnée disponible',
     };
   }
 
@@ -197,8 +198,8 @@ export function calculateMenqolScore(logs) {
     globalScore: Math.round(globalScore * 10) / 10,
     domains: averageDomainScores,
     logsAnalyzed: logs.length,
-    interpretation: getInterpretation(globalScore),
-    recommendation: getRecommendation(averageDomainScores),
+    interpretation: getInterpretation(globalScore, isEn),
+    recommendation: getRecommendation(averageDomainScores, isEn),
   };
 }
 
@@ -220,17 +221,27 @@ function getSeverity(score) {
  * @param {number} score - Score MENQOL global
  * @returns {string}
  */
-function getInterpretation(score) {
+function getInterpretation(score, isEn) {
   if (score === 0) {
-    return 'Aucun impact significatif sur la qualité de vie';
+    return isEn
+      ? 'No significant impact on quality of life'
+      : 'Aucun impact significatif sur la qualité de vie';
   } else if (score < 2) {
-    return 'Impact léger sur la qualité de vie';
+    return isEn
+      ? 'Mild impact on quality of life'
+      : 'Impact léger sur la qualité de vie';
   } else if (score < 4) {
-    return 'Impact modéré sur la qualité de vie';
+    return isEn
+      ? 'Moderate impact on quality of life'
+      : 'Impact modéré sur la qualité de vie';
   } else if (score < 6) {
-    return 'Impact important sur la qualité de vie';
+    return isEn
+      ? 'High impact on quality of life'
+      : 'Impact important sur la qualité de vie';
   } else {
-    return 'Impact majeur sur la qualité de vie';
+    return isEn
+      ? 'Very high impact on quality of life'
+      : 'Impact majeur sur la qualité de vie';
   }
 }
 
@@ -239,23 +250,36 @@ function getInterpretation(score) {
  * @param {Object} domains - Scores par domaine
  * @returns {string}
  */
-function getRecommendation(domains) {
+function getRecommendation(domains, isEn) {
   const highestDomain = Object.entries(domains)
     .sort((a, b) => b[1].score - a[1].score)[0];
 
-  const domainLabels = {
-    vasomotor: 'les symptômes vasomoteurs (bouffées, sueurs)',
-    psychosocial: 'l\'aspect psychologique (humeur, anxiété)',
-    physical: 'les symptômes physiques (fatigue, douleurs)',
-    sexual: 'la santé sexuelle',
-  };
+  const domainLabels = isEn
+    ? {
+        vasomotor: 'vasomotor symptoms (hot flashes, sweats)',
+        psychosocial: 'psychological symptoms (mood, anxiety)',
+        physical: 'physical symptoms (fatigue, pain)',
+        sexual: 'sexual health',
+      }
+    : {
+        vasomotor: 'les symptômes vasomoteurs (bouffées, sueurs)',
+        psychosocial: 'l\'aspect psychologique (humeur, anxiété)',
+        physical: 'les symptômes physiques (fatigue, douleurs)',
+        sexual: 'la santé sexuelle',
+      };
 
   if (highestDomain[1].score === 0) {
-    return 'Continuez votre suivi régulier pour maintenir ce bon équilibre.';
+    return isEn
+      ? 'Keep tracking regularly to maintain this good balance.'
+      : 'Continuez votre suivi régulier pour maintenir ce bon équilibre.';
   } else if (highestDomain[1].score < 4) {
-    return `Les données montrent un impact principal sur ${domainLabels[highestDomain[0]]}. Une discussion avec votre médecin pourrait aider.`;
+    return isEn
+      ? `Your data suggests the main impact is on ${domainLabels[highestDomain[0]]}. A discussion with your doctor could help.`
+      : `Les données montrent un impact principal sur ${domainLabels[highestDomain[0]]}. Une discussion avec votre médecin pourrait aider.`;
   } else {
-    return `Le score élevé concernant ${domainLabels[highestDomain[0]]} suggère de consulter votre médecin pour discuter d'options thérapeutiques.`;
+    return isEn
+      ? `A high score for ${domainLabels[highestDomain[0]]} suggests you should consult your doctor to discuss treatment options.`
+      : `Le score élevé concernant ${domainLabels[highestDomain[0]]} suggère de consulter votre médecin pour discuter d'options thérapeutiques.`;
   }
 }
 

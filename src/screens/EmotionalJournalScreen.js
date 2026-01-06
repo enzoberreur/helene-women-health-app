@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { COLORS, FONTS, SPACING, RADIUS } from '../constants/theme';
 import { analyzeTrends } from '../utils/sentimentAnalysis';
+import { LanguageContext } from '../../App';
 
 export default function EmotionalJournalScreen({ navigation, user }) {
+  const { t, language } = useContext(LanguageContext);
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState([]);
   const [trends, setTrends] = useState(null);
+
+  const tj = t?.journal || {};
+  const isEn = (language || 'fr').toLowerCase().startsWith('en');
 
   useEffect(() => {
     loadJournal();
@@ -79,12 +84,19 @@ export default function EmotionalJournalScreen({ navigation, user }) {
   const getTrendMessage = (trend) => {
     switch (trend) {
       case 'improving':
-        return '📈 Votre bien-être émotionnel s\'améliore !';
+        return tj?.trendMessages?.improving ?? (isEn ? '📈 Your emotional well-being is improving!' : '📈 Votre bien-être émotionnel s\'améliore !');
       case 'declining':
-        return '📉 Prenez soin de vous, n\'hésitez pas à en parler.';
+        return tj?.trendMessages?.declining ?? (isEn ? "📉 Take care of yourself—consider talking to someone you trust." : '📉 Prenez soin de vous, n\'hésitez pas à en parler.');
       default:
-        return '➡️ Votre bien-être émotionnel est stable.';
+        return tj?.trendMessages?.stable ?? (isEn ? '➡️ Your emotional well-being is stable.' : '➡️ Votre bien-être émotionnel est stable.');
     }
+  };
+
+  const getSentimentLabel = (sentiment) => {
+    const labels = tj?.sentimentLabels || {};
+    if (sentiment === 'positive') return labels.positive ?? (isEn ? 'Positive' : 'Positif');
+    if (sentiment === 'negative') return labels.negative ?? (isEn ? 'Tough' : 'Difficile');
+    return labels.neutral ?? (isEn ? 'Neutral' : 'Neutre');
   };
 
   if (loading) {
@@ -106,14 +118,14 @@ export default function EmotionalJournalScreen({ navigation, user }) {
         >
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Journal Émotionnel</Text>
+        <Text style={styles.headerTitle}>{tj?.title ?? (isEn ? 'Emotional Journal' : 'Journal Émotionnel')}</Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {trends && (
           <View style={styles.trendsSection}>
-            <Text style={styles.sectionTitle}>Analyse des 30 derniers jours</Text>
+            <Text style={styles.sectionTitle}>{tj?.analysisLast30Days ?? (isEn ? 'Analysis of the last 30 days' : 'Analyse des 30 derniers jours')}</Text>
 
             {/* Tendance générale */}
             <View style={styles.trendCard}>
@@ -131,26 +143,26 @@ export default function EmotionalJournalScreen({ navigation, user }) {
             <View style={styles.statsGrid}>
               <View style={[styles.statCard, { borderLeftColor: '#48BB78' }]}>
                 <Text style={styles.statValue}>{trends.positiveCount}</Text>
-                <Text style={styles.statLabel}>Jours positifs</Text>
+                <Text style={styles.statLabel}>{tj?.stats?.positiveDays ?? (isEn ? 'Positive days' : 'Jours positifs')}</Text>
                 <Text style={styles.statEmoji}>😊</Text>
               </View>
 
               <View style={[styles.statCard, { borderLeftColor: COLORS.gray[400] }]}>
                 <Text style={styles.statValue}>{trends.neutralCount}</Text>
-                <Text style={styles.statLabel}>Jours neutres</Text>
+                <Text style={styles.statLabel}>{tj?.stats?.neutralDays ?? (isEn ? 'Neutral days' : 'Jours neutres')}</Text>
                 <Text style={styles.statEmoji}>😐</Text>
               </View>
 
               <View style={[styles.statCard, { borderLeftColor: '#F56565' }]}>
                 <Text style={styles.statValue}>{trends.negativeCount}</Text>
-                <Text style={styles.statLabel}>Jours difficiles</Text>
+                <Text style={styles.statLabel}>{tj?.stats?.difficultDays ?? (isEn ? 'Tough days' : 'Jours difficiles')}</Text>
                 <Text style={styles.statEmoji}>😕</Text>
               </View>
             </View>
 
             {/* Score moyen */}
             <View style={styles.averageCard}>
-              <Text style={styles.averageLabel}>Score de bien-être moyen</Text>
+              <Text style={styles.averageLabel}>{tj?.averageScore ?? (isEn ? 'Average well-being score' : 'Score de bien-être moyen')}</Text>
               <View style={styles.averageBar}>
                 <View 
                   style={[
@@ -171,14 +183,14 @@ export default function EmotionalJournalScreen({ navigation, user }) {
 
         {/* Entrées du journal */}
         <View style={styles.entriesSection}>
-          <Text style={styles.sectionTitle}>Vos dernières notes</Text>
+          <Text style={styles.sectionTitle}>{tj?.latestNotes ?? (isEn ? 'Your latest notes' : 'Vos dernières notes')}</Text>
           
           {logs.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="book-outline" size={64} color={COLORS.primary} style={{ opacity: 0.3 }} />
-              <Text style={styles.emptyStateTitle}>Aucune note pour le moment</Text>
+              <Text style={styles.emptyStateTitle}>{tj?.emptyTitle ?? (isEn ? 'No notes yet' : 'Aucune note pour le moment')}</Text>
               <Text style={styles.emptyStateText}>
-                Commencez à écrire vos ressentis lors de vos check-ins quotidiens
+                {tj?.emptyDescription ?? (isEn ? 'Start writing how you feel during your daily check-ins' : 'Commencez à écrire vos ressentis lors de vos check-ins quotidiens')}
               </Text>
             </View>
           ) : (
@@ -187,7 +199,7 @@ export default function EmotionalJournalScreen({ navigation, user }) {
                 <View style={styles.entryHeader}>
                   <View style={styles.entryDateContainer}>
                     <Text style={styles.entryDate}>
-                      {new Date(log.log_date).toLocaleDateString('fr-FR', {
+                      {new Date(log.log_date).toLocaleDateString(isEn ? 'en-US' : 'fr-FR', {
                         weekday: 'long',
                         day: 'numeric',
                         month: 'long',
@@ -216,8 +228,7 @@ export default function EmotionalJournalScreen({ navigation, user }) {
                           { color: getSentimentColor(log.notes_sentiment) }
                         ]}
                       >
-                        {log.notes_sentiment === 'positive' ? 'Positif' : 
-                         log.notes_sentiment === 'negative' ? 'Difficile' : 'Neutre'}
+                        {getSentimentLabel(log.notes_sentiment)}
                       </Text>
                     </View>
                   )}
@@ -228,15 +239,15 @@ export default function EmotionalJournalScreen({ navigation, user }) {
                 <View style={styles.entryIndicators}>
                   <View style={styles.indicator}>
                     <Ionicons name="happy-outline" size={16} color={COLORS.textSecondary} />
-                    <Text style={styles.indicatorText}>Humeur: {log.mood}/5</Text>
+                    <Text style={styles.indicatorText}>{(tj?.indicators?.mood ?? (isEn ? 'Mood' : 'Humeur'))}: {log.mood}/5</Text>
                   </View>
                   <View style={styles.indicator}>
                     <Ionicons name="moon-outline" size={16} color={COLORS.textSecondary} />
-                    <Text style={styles.indicatorText}>Sommeil: {log.sleep_quality}/10</Text>
+                    <Text style={styles.indicatorText}>{(tj?.indicators?.sleep ?? (isEn ? 'Sleep' : 'Sommeil'))}: {log.sleep_quality}/10</Text>
                   </View>
                   <View style={styles.indicator}>
                     <Ionicons name="flash-outline" size={16} color={COLORS.textSecondary} />
-                    <Text style={styles.indicatorText}>Énergie: {log.energy_level}/5</Text>
+                    <Text style={styles.indicatorText}>{(tj?.indicators?.energy ?? (isEn ? 'Energy' : 'Énergie'))}: {log.energy_level}/5</Text>
                   </View>
                 </View>
               </View>

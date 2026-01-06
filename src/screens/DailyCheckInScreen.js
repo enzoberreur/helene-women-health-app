@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,38 +17,54 @@ import { supabase } from '../lib/supabase';
 import { LanguageContext } from '../../App';
 import { analyzeSentiment, generateEncouragementMessage } from '../utils/sentimentAnalysis';
 
-const MOOD_OPTIONS = [
-  { value: 1, icon: 'sad', label: 'Très bas', color: '#F56565' },
-  { value: 2, icon: 'sad-outline', label: 'Bas', color: '#ED8936' },
-  { value: 3, icon: 'remove-circle-outline', label: 'Neutre', color: '#718096' },
-  { value: 4, icon: 'happy-outline', label: 'Bien', color: '#48BB78' },
-  { value: 5, icon: 'happy', label: 'Excellent', color: '#38A169' },
-];
-
-const INTENSITY_OPTIONS = [
-  { value: 0, label: 'Aucun' },
-  { value: 1, label: 'Léger' },
-  { value: 2, label: 'Modéré' },
-  { value: 3, label: 'Sévère' },
-];
-
 const PHYSICAL_SYMPTOMS = [
-  { id: 'hot_flashes', label: 'Bouffées de chaleur', icon: 'flame' },
-  { id: 'night_sweats', label: 'Sueurs nocturnes', icon: 'moon' },
-  { id: 'headaches', label: 'Maux de tête', icon: 'sad' },
-  { id: 'joint_pain', label: 'Douleurs articulaires', icon: 'body' },
-  { id: 'fatigue', label: 'Fatigue', icon: 'battery-dead' },
+  { id: 'hot_flashes', icon: 'flame' },
+  { id: 'night_sweats', icon: 'moon' },
+  { id: 'headaches', icon: 'sad' },
+  { id: 'joint_pain', icon: 'body' },
+  { id: 'fatigue', icon: 'battery-dead' },
 ];
 
 const MENTAL_SYMPTOMS = [
-  { id: 'anxiety', label: 'Anxiété', icon: 'alert-circle' },
-  { id: 'irritability', label: 'Irritabilité', icon: 'flash' },
-  { id: 'brain_fog', label: 'Brouillard mental', icon: 'cloud' },
-  { id: 'low_mood', label: 'Humeur basse', icon: 'sad' },
+  { id: 'anxiety', icon: 'alert-circle' },
+  { id: 'irritability', icon: 'flash' },
+  { id: 'brain_fog', icon: 'cloud' },
+  { id: 'low_mood', icon: 'sad' },
 ];
 
 export default function DailyCheckInScreen({ navigation, user }) {
-  const { t } = useContext(LanguageContext);
+  const context = useContext(LanguageContext) || {};
+  const t = context.t || {};
+  const language = context.language || 'fr';
+
+  const td = t?.dailyCheckIn || {};
+  const tc = t?.common || {};
+  const symptomLabels = t?.home?.symptomLabels || {};
+
+  const moodOptions = useMemo(() => {
+    const labels = td?.moodOptions || {};
+    return [
+      { value: 1, icon: 'sad', label: labels?.veryLow ?? 'Very low', color: '#F56565' },
+      { value: 2, icon: 'sad-outline', label: labels?.low ?? 'Low', color: '#ED8936' },
+      { value: 3, icon: 'remove-circle-outline', label: labels?.neutral ?? 'Neutral', color: '#718096' },
+      { value: 4, icon: 'happy-outline', label: labels?.good ?? 'Good', color: '#48BB78' },
+      { value: 5, icon: 'happy', label: labels?.excellent ?? 'Excellent', color: '#38A169' },
+    ];
+  }, [td]);
+
+  const intensityOptions = useMemo(() => {
+    const labels = td?.intensity || {};
+    return [
+      { value: 0, label: labels?.none ?? 'None' },
+      { value: 1, label: labels?.mild ?? 'Mild' },
+      { value: 2, label: labels?.moderate ?? 'Moderate' },
+      { value: 3, label: labels?.severe ?? 'Severe' },
+    ];
+  }, [td]);
+
+  const getSymptomLabel = (symptomId) => {
+    return symptomLabels?.[symptomId] ?? symptomId;
+  };
   const [loading, setLoading] = useState(false);
   const [existingLog, setExistingLog] = useState(null);
 
@@ -124,7 +140,7 @@ export default function DailyCheckInScreen({ navigation, user }) {
       
       if (notes && notes.trim().length > 0) {
         sentimentAnalysis = analyzeSentiment(notes);
-        encouragementMessage = generateEncouragementMessage(sentimentAnalysis);
+        encouragementMessage = generateEncouragementMessage({ ...sentimentAnalysis, language });
       }
 
       const logData = {
@@ -158,23 +174,25 @@ export default function DailyCheckInScreen({ navigation, user }) {
       if (error) throw error;
 
       // Message personnalisé avec encouragement
-      const alertMessage = sentimentAnalysis 
-        ? `Votre suivi quotidien a été enregistré.\n\n${sentimentAnalysis.emoji} ${encouragementMessage}`
-        : 'Votre suivi quotidien a été enregistré.';
+      const alertMessage = sentimentAnalysis
+        ? (td?.savedMessageWithEncouragement ?? 'Your daily check-in has been saved.\n\n{emoji} {message}')
+            .replace('{emoji}', sentimentAnalysis.emoji)
+            .replace('{message}', encouragementMessage)
+        : (td?.savedMessage ?? 'Your daily check-in has been saved.');
 
       Alert.alert(
-        '✅ Enregistré !',
+        td?.savedTitle ?? '✅ Saved!',
         alertMessage,
         [
           {
-            text: 'OK',
+            text: tc?.ok ?? 'OK',
             onPress: () => navigation.navigate('home'),
           },
         ]
       );
     } catch (error) {
       console.error('Erreur sauvegarde:', error);
-      Alert.alert('Erreur', error.message);
+      Alert.alert(tc?.error ?? 'Error', error.message);
     } finally {
       setLoading(false);
     }
@@ -199,16 +217,16 @@ export default function DailyCheckInScreen({ navigation, user }) {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Check-in quotidien</Text>
+          <Text style={styles.headerTitle}>{td?.title ?? 'Daily check-in'}</Text>
           <View style={styles.placeholder} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Mood */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Comment vous sentez-vous aujourd'hui ?</Text>
+            <Text style={styles.sectionTitle}>{td?.moodQuestion ?? 'How are you feeling today?'}</Text>
             <View style={styles.moodContainer}>
-              {MOOD_OPTIONS.map((option) => (
+              {moodOptions.map((option) => (
                 <TouchableOpacity
                   key={option.value}
                   style={[styles.moodButton, mood === option.value && styles.moodButtonSelected]}
@@ -235,7 +253,7 @@ export default function DailyCheckInScreen({ navigation, user }) {
 
           {/* Energy & Sleep */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Niveau d'énergie</Text>
+            <Text style={styles.sectionTitle}>{td?.energyTitle ?? 'Energy level'}</Text>
             <View style={styles.scaleContainer}>
               {[1, 2, 3, 4, 5].map((value) => (
                 <TouchableOpacity
@@ -250,13 +268,13 @@ export default function DailyCheckInScreen({ navigation, user }) {
               ))}
             </View>
             <View style={styles.scaleLabels}>
-              <Text style={styles.scaleLabel}>Très faible</Text>
-              <Text style={styles.scaleLabel}>Excellent</Text>
+              <Text style={styles.scaleLabel}>{td?.energyLow ?? 'Very low'}</Text>
+              <Text style={styles.scaleLabel}>{td?.energyHigh ?? 'Excellent'}</Text>
             </View>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Qualité du sommeil</Text>
+            <Text style={styles.sectionTitle}>{td?.sleepTitle ?? 'Sleep quality'}</Text>
             <View style={styles.scaleContainer}>
               {[1, 2, 3, 4, 5].map((value) => (
                 <TouchableOpacity
@@ -271,22 +289,22 @@ export default function DailyCheckInScreen({ navigation, user }) {
               ))}
             </View>
             <View style={styles.scaleLabels}>
-              <Text style={styles.scaleLabel}>Très mauvaise</Text>
-              <Text style={styles.scaleLabel}>Excellente</Text>
+              <Text style={styles.scaleLabel}>{td?.sleepLow ?? 'Very poor'}</Text>
+              <Text style={styles.scaleLabel}>{td?.sleepHigh ?? 'Excellent'}</Text>
             </View>
           </View>
 
           {/* Physical Symptoms */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Symptômes physiques</Text>
+            <Text style={styles.sectionTitle}>{td?.physicalSymptoms ?? 'Physical symptoms'}</Text>
             {PHYSICAL_SYMPTOMS.map((symptom) => (
               <View key={symptom.id} style={styles.symptomRow}>
                 <View style={styles.symptomHeader}>
                   <Ionicons name={symptom.icon} size={20} color={COLORS.primary} />
-                  <Text style={styles.symptomLabel}>{symptom.label}</Text>
+                  <Text style={styles.symptomLabel}>{getSymptomLabel(symptom.id)}</Text>
                 </View>
                 <View style={styles.intensityContainer}>
-                  {INTENSITY_OPTIONS.map((option) => (
+                  {intensityOptions.map((option) => (
                     <TouchableOpacity
                       key={option.value}
                       style={[
@@ -312,15 +330,15 @@ export default function DailyCheckInScreen({ navigation, user }) {
 
           {/* Mental Symptoms */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>État mental & émotionnel</Text>
+            <Text style={styles.sectionTitle}>{td?.mentalSymptoms ?? 'Mental & emotional state'}</Text>
             {MENTAL_SYMPTOMS.map((symptom) => (
               <View key={symptom.id} style={styles.symptomRow}>
                 <View style={styles.symptomHeader}>
                   <Ionicons name={symptom.icon} size={20} color={COLORS.primary} />
-                  <Text style={styles.symptomLabel}>{symptom.label}</Text>
+                  <Text style={styles.symptomLabel}>{getSymptomLabel(symptom.id)}</Text>
                 </View>
                 <View style={styles.intensityContainer}>
-                  {INTENSITY_OPTIONS.map((option) => (
+                  {intensityOptions.map((option) => (
                     <TouchableOpacity
                       key={option.value}
                       style={[
@@ -346,10 +364,10 @@ export default function DailyCheckInScreen({ navigation, user }) {
 
           {/* Notes */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Notes (optionnel)</Text>
+            <Text style={styles.sectionTitle}>{td?.notesTitle ?? 'Notes (optional)'}</Text>
             <TextInput
               style={styles.notesInput}
-              placeholder="Comment s'est passée votre journée ? Notez ce que vous voulez..."
+              placeholder={td?.notesPlaceholder ?? 'How was your day? Write anything you want...'}
               placeholderTextColor={COLORS.gray[300]}
               value={notes}
               onChangeText={setNotes}
@@ -367,7 +385,11 @@ export default function DailyCheckInScreen({ navigation, user }) {
             disabled={loading}
           >
             <Text style={styles.saveButtonText}>
-              {loading ? 'Enregistrement...' : existingLog ? 'Mettre à jour' : 'Enregistrer'}
+              {loading
+                ? (td?.saving ?? (tc?.saving ?? 'Saving...'))
+                : existingLog
+                  ? (td?.update ?? 'Update')
+                  : (td?.save ?? (tc?.save ?? 'Save'))}
             </Text>
           </TouchableOpacity>
         </View>

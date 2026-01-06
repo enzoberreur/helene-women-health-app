@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -14,10 +14,12 @@ import { LineChart, BarChart } from 'react-native-chart-kit';
 import { supabase } from '../lib/supabase';
 import { COLORS, FONTS, SPACING, RADIUS } from '../constants/theme';
 import { calculateMenqolScore } from '../utils/menqolCalculator';
+import { LanguageContext } from '../../App';
 
 const { width } = Dimensions.get('window');
 
 export default function TrendsScreen({ navigation, user }) {
+  const { t, language } = useContext(LanguageContext);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState(7); // 7 ou 30 jours
   const [data, setData] = useState({
@@ -78,7 +80,7 @@ export default function TrendsScreen({ navigation, user }) {
         });
 
         // Calculer le score MENQOL
-        const menqolScore = calculateMenqolScore(logs);
+        const menqolScore = calculateMenqolScore(logs, language);
 
         setData({
           moodData,
@@ -96,18 +98,16 @@ export default function TrendsScreen({ navigation, user }) {
   };
 
   const getSymptomLabel = (symptom) => {
-    const labels = {
-      hot_flashes: 'Bouffées',
-      night_sweats: 'Sueurs',
-      headaches: 'Maux de tête',
-      joint_pain: 'Douleurs',
-      fatigue: 'Fatigue',
-      anxiety: 'Anxiété',
-      irritability: 'Irritabilité',
-      brain_fog: 'Brouillard',
-      low_mood: 'Humeur basse',
-    };
-    return labels[symptom] || symptom;
+    const homeLabels = t?.home?.symptomLabels || {};
+    const trendsLabels = t?.trends?.symptoms || {};
+    return homeLabels[symptom] || trendsLabels[symptom] || symptom;
+  };
+
+  const tt = t?.trends || {};
+  const isEn = (language || 'fr').toLowerCase().startsWith('en');
+  const formatPeriodSubtitle = (template) => {
+    if (!template) return '';
+    return template.replace('{period}', String(period));
   };
 
   const chartConfig = {
@@ -156,7 +156,7 @@ export default function TrendsScreen({ navigation, user }) {
         >
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Tendances</Text>
+        <Text style={styles.headerTitle}>{tt?.title ?? 'Trends'}</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -168,7 +168,7 @@ export default function TrendsScreen({ navigation, user }) {
             onPress={() => setPeriod(7)}
           >
             <Text style={[styles.periodButtonText, period === 7 && styles.periodButtonTextActive]}>
-              7 jours
+              {tt?.period7days ?? '7 days'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -176,7 +176,7 @@ export default function TrendsScreen({ navigation, user }) {
             onPress={() => setPeriod(30)}
           >
             <Text style={[styles.periodButtonText, period === 30 && styles.periodButtonTextActive]}>
-              30 jours
+              {tt?.period30days ?? '30 days'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -184,9 +184,9 @@ export default function TrendsScreen({ navigation, user }) {
         {data.moodData.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="analytics-outline" size={64} color={COLORS.primary} style={{ opacity: 0.3 }} />
-            <Text style={styles.emptyStateTitle}>Pas encore de données</Text>
+            <Text style={styles.emptyStateTitle}>{tt?.noData ?? 'No data yet'}</Text>
             <Text style={styles.emptyStateText}>
-              Commencez à enregistrer vos check-ins quotidiens pour voir vos tendances
+              {tt?.noDataDescription ?? tt?.noDataSubtitle ?? 'Start recording your daily check-ins to see your trends'}
             </Text>
           </View>
         ) : (
@@ -197,10 +197,10 @@ export default function TrendsScreen({ navigation, user }) {
                 <View style={styles.menqolHeader}>
                   <View style={styles.menqolTitleContainer}>
                     <Ionicons name="medical" size={24} color={COLORS.primary} />
-                    <Text style={styles.menqolTitle}>Score MENQOL</Text>
+                    <Text style={styles.menqolTitle}>{tt?.menqolScore ?? 'MENQOL Score'}</Text>
                   </View>
                   <View style={styles.menqolBadge}>
-                    <Text style={styles.menqolBadgeText}>Standardisé</Text>
+                    <Text style={styles.menqolBadgeText}>{tt?.menqolStandardized ?? 'Standardized'}</Text>
                   </View>
                 </View>
 
@@ -219,11 +219,11 @@ export default function TrendsScreen({ navigation, user }) {
                         physical: 'body',
                         sexual: 'heart',
                       };
-                      const domainLabels = {
-                        vasomotor: 'Vasomoteur',
-                        psychosocial: 'Psychosocial',
-                        physical: 'Physique',
-                        sexual: 'Sexuel',
+                      const domainLabels = tt?.menqolDomains || {
+                        vasomotor: tt?.vasomotor,
+                        psychosocial: tt?.psychosocial,
+                        physical: tt?.physical,
+                        sexual: tt?.sexual,
                       };
                       const severityColors = {
                         none: COLORS.gray[300],
@@ -239,7 +239,7 @@ export default function TrendsScreen({ navigation, user }) {
                         <View key={domain} style={styles.menqolDomain}>
                           <View style={styles.menqolDomainHeader}>
                             <Ionicons name={domainIcons[domain]} size={16} color={severityColors[data.severity]} />
-                            <Text style={styles.menqolDomainLabel}>{domainLabels[domain]}</Text>
+                            <Text style={styles.menqolDomainLabel}>{domainLabels?.[domain] ?? domain}</Text>
                           </View>
                           <View style={styles.menqolDomainScore}>
                             <View style={styles.menqolDomainBar}>
@@ -272,8 +272,10 @@ export default function TrendsScreen({ navigation, user }) {
 
             {/* Mood Chart */}
             <View style={styles.chartSection}>
-              <Text style={styles.chartTitle}>Humeur</Text>
-              <Text style={styles.chartSubtitle}>Évolution de votre humeur sur {period} jours</Text>
+              <Text style={styles.chartTitle}>{tt?.mood ?? (isEn ? 'Mood' : 'Humeur')}</Text>
+              <Text style={styles.chartSubtitle}>
+                {formatPeriodSubtitle(tt?.moodSubtitle ?? (isEn ? 'Mood trend over {period} days' : 'Évolution de votre humeur sur {period} jours'))}
+              </Text>
               <View style={styles.chartContainer}>
                 <LineChart
                   data={{
@@ -299,8 +301,10 @@ export default function TrendsScreen({ navigation, user }) {
 
             {/* Sleep Chart */}
             <View style={styles.chartSection}>
-              <Text style={styles.chartTitle}>Sommeil</Text>
-              <Text style={styles.chartSubtitle}>Qualité de sommeil sur {period} jours</Text>
+              <Text style={styles.chartTitle}>{tt?.sleep ?? (isEn ? 'Sleep' : 'Sommeil')}</Text>
+              <Text style={styles.chartSubtitle}>
+                {formatPeriodSubtitle(tt?.sleepSubtitle ?? (isEn ? 'Sleep quality over {period} days' : 'Qualité de sommeil sur {period} jours'))}
+              </Text>
               <View style={styles.chartContainer}>
                 <LineChart
                   data={{
@@ -335,8 +339,10 @@ export default function TrendsScreen({ navigation, user }) {
             {/* Symptoms Chart */}
             {topSymptoms.length > 0 && (
               <View style={styles.chartSection}>
-                <Text style={styles.chartTitle}>Symptômes les plus fréquents</Text>
-                <Text style={styles.chartSubtitle}>Nombre d'occurrences sur {period} jours</Text>
+                <Text style={styles.chartTitle}>{tt?.topSymptoms ?? (isEn ? 'Most frequent symptoms' : 'Symptômes les plus fréquents')}</Text>
+                <Text style={styles.chartSubtitle}>
+                  {formatPeriodSubtitle(tt?.symptomsSubtitle ?? (isEn ? 'Number of occurrences over {period} days' : "Nombre d'occurrences sur {period} jours"))}
+                </Text>
                 <View style={styles.chartContainer}>
                   <BarChart
                     data={{
@@ -361,14 +367,14 @@ export default function TrendsScreen({ navigation, user }) {
 
             {/* Insights */}
             <View style={styles.insightsSection}>
-              <Text style={styles.sectionTitle}>Observations</Text>
+              <Text style={styles.sectionTitle}>{tt?.observations ?? (isEn ? 'Observations' : 'Observations')}</Text>
               
               <View style={styles.insightCard}>
                 <View style={styles.insightIcon}>
                   <Ionicons name="trending-up" size={20} color={COLORS.primary} />
                 </View>
                 <View style={styles.insightContent}>
-                  <Text style={styles.insightTitle}>Humeur moyenne</Text>
+                  <Text style={styles.insightTitle}>{tt?.averageMood ?? (isEn ? 'Average mood' : 'Humeur moyenne')}</Text>
                   <Text style={styles.insightValue}>
                     {(data.moodData.reduce((a, b) => a + b, 0) / data.moodData.length).toFixed(1)}/5
                   </Text>
@@ -380,7 +386,7 @@ export default function TrendsScreen({ navigation, user }) {
                   <Ionicons name="moon" size={20} color={COLORS.success} />
                 </View>
                 <View style={styles.insightContent}>
-                  <Text style={styles.insightTitle}>Sommeil moyen</Text>
+                  <Text style={styles.insightTitle}>{tt?.averageSleep ?? (isEn ? 'Average sleep' : 'Sommeil moyen')}</Text>
                   <Text style={styles.insightValue}>
                     {(data.sleepData.reduce((a, b) => a + b, 0) / data.sleepData.length).toFixed(1)}/10
                   </Text>
@@ -393,9 +399,9 @@ export default function TrendsScreen({ navigation, user }) {
                     <Ionicons name="pulse" size={20} color={COLORS.warning} />
                   </View>
                   <View style={styles.insightContent}>
-                    <Text style={styles.insightTitle}>Symptôme principal</Text>
+                    <Text style={styles.insightTitle}>{tt?.mainSymptom ?? (isEn ? 'Main symptom' : 'Symptôme principal')}</Text>
                     <Text style={styles.insightValue}>
-                      {getSymptomLabel(topSymptoms[0][0])} ({topSymptoms[0][1]} jours)
+                      {getSymptomLabel(topSymptoms[0][0])} ({topSymptoms[0][1]} {tt?.days ?? (isEn ? 'days' : 'jours')})
                     </Text>
                   </View>
                 </View>

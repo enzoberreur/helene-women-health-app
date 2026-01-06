@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,42 +10,71 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
+import { LanguageContext } from '../../App';
 
 const { width } = Dimensions.get('window');
 
-const ROLES = [
-  {
-    id: 1,
-    icon: 'search',
-    title: 'L\'Interprète',
-    subtitle: 'Comprendre ce qui se passe',
-    description: 'Helene analyse vos symptômes et vous aide à comprendre les changements de votre corps avec des explications claires et personnalisées.',
-    color: COLORS.primary,
-  },
-  {
-    id: 2,
-    icon: 'book',
-    title: 'La Conteuse',
-    subtitle: 'Voir votre histoire se dessiner',
-    description: 'Helene visualise votre parcours à travers des graphiques et des insights, révélant les patterns et tendances de votre bien-être.',
-    color: '#8B5CF6',
-  },
-  {
-    id: 3,
-    icon: 'heart',
-    title: 'La Compagne',
-    subtitle: 'Un soutien au quotidien',
-    description: 'Helene est là pour vous écouter, vous conseiller et vous accompagner avec bienveillance à chaque étape de votre parcours.',
-    color: '#10B981',
-  },
-];
-
 export default function OnboardingRolesScreen({ navigation }) {
+  const context = useContext(LanguageContext) || {};
+  const t = context.t || {};
+
   const [currentIndex, setCurrentIndex] = useState(0);
-  const currentRole = ROLES[currentIndex];
+
+  const roles = useMemo(() => {
+    const tr = t?.onboarding?.roles || {};
+
+    return [
+      {
+        id: 1,
+        icon: 'search',
+        title: tr?.interpreter?.title ?? "L'Interprète",
+        subtitle: tr?.interpreter?.subtitle ?? 'Comprendre ce qui se passe',
+        description:
+          tr?.interpreter?.description ??
+          "Hélène analyse vos symptômes et vous aide à comprendre les changements de votre corps avec des explications claires et personnalisées.",
+        example:
+          tr?.interpreter?.example ??
+          '"Vous ressentez des bouffées de chaleur ? Hélène vous explique pourquoi elles surviennent et comment les gérer au quotidien."',
+        color: COLORS.primary,
+      },
+      {
+        id: 2,
+        icon: 'book',
+        title: tr?.storyteller?.title ?? 'La Conteuse',
+        subtitle: tr?.storyteller?.subtitle ?? 'Voir votre histoire se dessiner',
+        description:
+          tr?.storyteller?.description ??
+          "Hélène visualise votre parcours à travers des graphiques et des insights, révélant les patterns et tendances de votre bien-être.",
+        example:
+          tr?.storyteller?.example ??
+          '"Découvrez que votre humeur s\'améliore les jours où vous dormez mieux, grâce aux graphiques et insights personnalisés."',
+        color: '#8B5CF6',
+      },
+      {
+        id: 3,
+        icon: 'heart',
+        title: tr?.companion?.title ?? 'La Compagne',
+        subtitle: tr?.companion?.subtitle ?? 'Un soutien au quotidien',
+        description:
+          tr?.companion?.description ??
+          "Hélène est là pour vous écouter, vous conseiller et vous accompagner avec bienveillance à chaque étape de votre parcours.",
+        example:
+          tr?.companion?.example ??
+          '"Discutez librement avec Hélène de vos préoccupations, elle vous écoute et vous conseille avec empathie."',
+        color: '#10B981',
+      },
+    ];
+  }, [t]);
+
+  const currentRole = roles[currentIndex];
+  const exampleTitle = t?.onboarding?.roles?.exampleTitle ?? 'Par exemple';
+  const backLabel = t?.common?.back ?? 'Retour';
+  const nextLabel = t?.onboarding?.next ?? 'Suivant';
+  const continueLabel = t?.onboarding?.continue ?? 'Continuer';
+  const skipLabel = t?.onboarding?.welcome?.skipIntro ?? "Passer l'introduction";
 
   const handleNext = () => {
-    if (currentIndex < ROLES.length - 1) {
+    if (currentIndex < roles.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       navigation.navigate('onboardingValue');
@@ -63,7 +92,7 @@ export default function OnboardingRolesScreen({ navigation }) {
       <View style={styles.content}>
         {/* Progress Indicators */}
         <View style={styles.progressContainer}>
-          {ROLES.map((role, index) => (
+          {roles.map((role, index) => (
             <View
               key={role.id}
               style={[
@@ -98,24 +127,10 @@ export default function OnboardingRolesScreen({ navigation }) {
           <View style={styles.exampleCard}>
             <View style={styles.exampleHeader}>
               <Ionicons name="information-circle" size={20} color={COLORS.primary} />
-              <Text style={styles.exampleTitle}>Par exemple</Text>
+              <Text style={styles.exampleTitle}>{exampleTitle}</Text>
             </View>
-            
-            {currentIndex === 0 && (
-              <Text style={styles.exampleText}>
-                "Vous ressentez des bouffées de chaleur ? Helene vous explique pourquoi elles surviennent et comment les gérer au quotidien."
-              </Text>
-            )}
-            {currentIndex === 1 && (
-              <Text style={styles.exampleText}>
-                "Découvrez que votre humeur s'améliore les jours où vous dormez mieux, grâce aux graphiques et insights personnalisés."
-              </Text>
-            )}
-            {currentIndex === 2 && (
-              <Text style={styles.exampleText}>
-                "Discutez librement avec Helene de vos préoccupations, elle vous écoute et vous conseille avec empathie."
-              </Text>
-            )}
+
+            <Text style={styles.exampleText}>{currentRole?.example ?? ''}</Text>
           </View>
         </ScrollView>
 
@@ -124,7 +139,7 @@ export default function OnboardingRolesScreen({ navigation }) {
           {currentIndex > 0 && (
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <Ionicons name="arrow-back" size={20} color={COLORS.text} />
-              <Text style={styles.backText}>Retour</Text>
+              <Text style={styles.backText}>{backLabel}</Text>
             </TouchableOpacity>
           )}
 
@@ -133,7 +148,7 @@ export default function OnboardingRolesScreen({ navigation }) {
             onPress={handleNext}
           >
             <Text style={styles.nextText}>
-              {currentIndex === ROLES.length - 1 ? 'Continuer' : 'Suivant'}
+              {currentIndex === roles.length - 1 ? continueLabel : nextLabel}
             </Text>
             <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
           </TouchableOpacity>
@@ -144,7 +159,7 @@ export default function OnboardingRolesScreen({ navigation }) {
           style={styles.skipButton}
           onPress={() => navigation.navigate('signup')}
         >
-          <Text style={styles.skipText}>Passer l'introduction</Text>
+          <Text style={styles.skipText}>{skipLabel}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

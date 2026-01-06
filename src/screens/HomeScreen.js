@@ -17,7 +17,7 @@ import { generateWeeklyInsights } from '../utils/insightsGenerator';
 import { hapticFeedback } from '../utils/hapticFeedback';
 
 export default function HomeScreen({ navigation }) {
-  const { t } = useContext(LanguageContext);
+  const { t, language } = useContext(LanguageContext);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     avgMood: 0,
@@ -104,7 +104,7 @@ export default function HomeScreen({ navigation }) {
         });
 
         // Générer les insights
-        const weeklyInsights = generateWeeklyInsights(logs);
+        const weeklyInsights = generateWeeklyInsights(logs, language);
         setInsights(weeklyInsights);
       }
     } catch (error) {
@@ -115,17 +115,7 @@ export default function HomeScreen({ navigation }) {
   };
 
   const getSymptomLabel = (symptom) => {
-    const labels = {
-      hot_flashes: 'Bouffées de chaleur',
-      night_sweats: 'Sueurs nocturnes',
-      headaches: 'Maux de tête',
-      joint_pain: 'Douleurs articulaires',
-      fatigue: 'Fatigue',
-      anxiety: 'Anxiété',
-      irritability: 'Irritabilité',
-      brain_fog: 'Brouillard mental',
-      low_mood: 'Humeur basse',
-    };
+    const labels = t?.home?.symptomLabels || {};
     return labels[symptom] || symptom;
   };
 
@@ -162,7 +152,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <Text style={styles.greeting}>{t.home.hello}</Text>
-            <Text style={styles.subtitle}>Comment allez-vous aujourd'hui ?</Text>
+            <Text style={styles.subtitle}>{t.home.headerSubtitle}</Text>
           </View>
           <TouchableOpacity
             style={styles.profileButton}
@@ -198,7 +188,7 @@ export default function HomeScreen({ navigation }) {
         {/* Statistiques */}
         <View style={styles.statsSection}>
           <View style={styles.statsSectionHeader}>
-            <Text style={styles.sectionTitle}>Cette semaine</Text>
+            <Text style={styles.sectionTitle}>{t.home.thisWeek}</Text>
             {stats.totalLogs > 0 && (
               <TouchableOpacity
                 onPress={() => {
@@ -207,7 +197,7 @@ export default function HomeScreen({ navigation }) {
                 }}
                 style={styles.viewAllButton}
               >
-                <Text style={styles.viewAllText}>Voir plus</Text>
+                <Text style={styles.viewAllText}>{t.home.viewMore}</Text>
                 <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
               </TouchableOpacity>
             )}
@@ -254,7 +244,7 @@ export default function HomeScreen({ navigation }) {
                     color={getMoodIcon(stats.avgMood).color} 
                   />
                   <Text style={styles.statValue}>{stats.avgMood}</Text>
-                  <Text style={styles.statLabel}>Humeur</Text>
+                  <Text style={styles.statLabel}>{t.home.stats.mood}</Text>
                 </View>
 
                 <View style={styles.statCard}>
@@ -264,20 +254,20 @@ export default function HomeScreen({ navigation }) {
                     color={getSleepIcon(stats.avgSleep).color} 
                   />
                   <Text style={styles.statValue}>{stats.avgSleep}</Text>
-                  <Text style={styles.statLabel}>Sommeil</Text>
+                  <Text style={styles.statLabel}>{t.home.stats.sleep}</Text>
                 </View>
 
                 <View style={styles.statCard}>
                   <Ionicons name="calendar" size={32} color={COLORS.primary} />
                   <Text style={styles.statValue}>{stats.totalLogs}</Text>
-                  <Text style={styles.statLabel}>Jours</Text>
+                  <Text style={styles.statLabel}>{t.home.stats.days}</Text>
                 </View>
               </View>
 
               {/* Insights automatiques */}
               {insights.length > 0 && (
                 <View style={styles.insightsContainer}>
-                  <Text style={styles.insightsTitle}>💡 Observations cette semaine</Text>
+                  <Text style={styles.insightsTitle}>{t.home.weeklyInsightsTitle}</Text>
                   {insights.map((insight) => (
                     <View 
                       key={insight.id} 
@@ -314,7 +304,7 @@ export default function HomeScreen({ navigation }) {
                     <Ionicons name="pulse" size={20} color={COLORS.primary} />
                   </View>
                   <View style={styles.insightContent}>
-                    <Text style={styles.insightTitle}>Symptôme le plus fréquent</Text>
+                    <Text style={styles.insightTitle}>{t.home.mostFrequentSymptom}</Text>
                     <Text style={styles.insightText}>
                       {getSymptomLabel(stats.topSymptom)}
                     </Text>

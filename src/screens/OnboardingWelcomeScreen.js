@@ -1,54 +1,52 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
-  Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
-
-const { width } = Dimensions.get('window');
+import { LanguageContext } from '../../App';
 
 export default function OnboardingWelcomeScreen({ navigation }) {
+  const context = useContext(LanguageContext) || {};
+  const t = context.t || {};
+
+  const title = t?.onboarding?.welcome?.title ?? 'Welcome';
+  const featureUnderstand = t?.onboarding?.welcome?.featureUnderstand ?? '';
+  const featureTrack = t?.onboarding?.welcome?.featureTrack ?? '';
+  const featureShare = t?.onboarding?.welcome?.featureShare ?? '';
+  const startLabel = t?.onboarding?.start ?? 'Get started';
+  const skipLabel = t?.onboarding?.welcome?.skipIntro ?? 'Skip';
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.logo}>Helene</Text>
-          <Text style={styles.tagline}>your wellness companion</Text>
-        </View>
-
         {/* Main Content */}
         <View style={styles.mainContent}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="sparkles" size={64} color={COLORS.primary} />
-          </View>
-          
-          <Text style={styles.title}>
-            Bienvenue dans votre espace bien-être
-          </Text>
-          
-          <Text style={styles.description}>
-            Helene vous accompagne à travers la ménopause avec bienveillance et intelligence.
-          </Text>
+          <Text style={styles.title}>{title}</Text>
 
           <View style={styles.featuresContainer}>
-            <View style={styles.featureItem}>
-              <View style={styles.featureDot} />
-              <Text style={styles.featureText}>Comprenez vos symptômes</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <View style={styles.featureDot} />
-              <Text style={styles.featureText}>Suivez votre évolution</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <View style={styles.featureDot} />
-              <Text style={styles.featureText}>Partagez avec votre médecin</Text>
-            </View>
+            {!!featureUnderstand && (
+              <View style={styles.featureItem}>
+                <View style={styles.featureDot} />
+                <Text style={styles.featureText}>{featureUnderstand}</Text>
+              </View>
+            )}
+            {!!featureTrack && (
+              <View style={styles.featureItem}>
+                <View style={styles.featureDot} />
+                <Text style={styles.featureText}>{featureTrack}</Text>
+              </View>
+            )}
+            {!!featureShare && (
+              <View style={styles.featureItem}>
+                <View style={styles.featureDot} />
+                <Text style={styles.featureText}>{featureShare}</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -58,15 +56,15 @@ export default function OnboardingWelcomeScreen({ navigation }) {
             style={styles.button}
             onPress={() => navigation.navigate('onboardingRoles')}
           >
-            <Text style={styles.buttonText}>Commencer</Text>
-            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+            <Text style={styles.buttonText}>{startLabel}</Text>
+            <Ionicons name="arrow-forward" size={20} color={COLORS.white} />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.skipButton}
             onPress={() => navigation.navigate('signup')}
           >
-            <Text style={styles.skipText}>Passer l'introduction</Text>
+            <Text style={styles.skipText}>{skipLabel}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -82,59 +80,28 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.xl,
+    paddingTop: SPACING.xxl,
     paddingBottom: SPACING.lg,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: SPACING.xl * 2,
-  },
-  logo: {
-    fontSize: 48,
-    fontFamily: FONTS.heading.italic,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-  },
-  tagline: {
-    fontSize: 14,
-    fontFamily: FONTS.body.regular,
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
+    width: '100%',
+    maxWidth: 440,
+    alignSelf: 'center',
   },
   mainContent: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.xl,
-  },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontFamily: FONTS.heading.regular,
     color: COLORS.text,
     textAlign: 'center',
-    marginBottom: SPACING.md,
-    lineHeight: 36,
-  },
-  description: {
-    fontSize: 16,
-    fontFamily: FONTS.body.regular,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
     marginBottom: SPACING.xl,
-    paddingHorizontal: SPACING.md,
+    lineHeight: 40,
   },
   featuresContainer: {
     width: '100%',
-    paddingHorizontal: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
   },
   featureItem: {
     flexDirection: 'row',
@@ -142,22 +109,23 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   featureDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: COLORS.primary,
     marginRight: SPACING.md,
   },
   featureText: {
     fontSize: 16,
     fontFamily: FONTS.body.medium,
-    color: COLORS.text,
+    color: COLORS.textSecondary,
   },
   footer: {
     width: '100%',
   },
   button: {
     flexDirection: 'row',
+    width: '100%',
     backgroundColor: COLORS.primary,
     paddingVertical: SPACING.md + 2,
     paddingHorizontal: SPACING.xl,
@@ -169,7 +137,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontFamily: FONTS.body.semibold,
-    color: '#FFFFFF',
+    color: COLORS.white,
     marginRight: SPACING.sm,
   },
   skipButton: {

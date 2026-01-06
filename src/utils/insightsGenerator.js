@@ -2,8 +2,10 @@
  * Générateur d'insights automatiques basés sur les données de santé
  */
 
-export const generateWeeklyInsights = (logs) => {
+export const generateWeeklyInsights = (logs, language = 'fr') => {
   if (!logs || logs.length === 0) return [];
+
+  const isEn = (language || 'fr').toLowerCase().startsWith('en');
 
   const insights = [];
   const currentWeekLogs = logs.slice(0, 7);
@@ -20,8 +22,10 @@ export const generateWeeklyInsights = (logs) => {
         id: 'mood-trend',
         type: moodChange > 0 ? 'positive' : 'warning',
         icon: moodChange > 0 ? 'trending-up' : 'trending-down',
-        title: 'Tendance humeur',
-        message: `Votre humeur est ${moodChange > 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(moodChange).toFixed(0)}% cette semaine`,
+        title: isEn ? 'Mood trend' : 'Tendance humeur',
+        message: isEn
+          ? `Your mood is ${moodChange > 0 ? 'up' : 'down'} by ${Math.abs(moodChange).toFixed(0)}% this week`
+          : `Votre humeur est ${moodChange > 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(moodChange).toFixed(0)}% cette semaine`,
         value: `${currentMoodAvg.toFixed(1)}/5`,
       });
     }
@@ -38,8 +42,10 @@ export const generateWeeklyInsights = (logs) => {
         id: 'sleep-trend',
         type: sleepChange > 0 ? 'positive' : 'info',
         icon: 'moon',
-        title: 'Sommeil',
-        message: `Vous avez ${sleepChange > 0 ? 'mieux dormi' : 'moins bien dormi'} cette semaine (${sleepChange > 0 ? '+' : ''}${sleepChange.toFixed(1)}h)`,
+        title: isEn ? 'Sleep' : 'Sommeil',
+        message: isEn
+          ? `You ${sleepChange > 0 ? 'slept better' : 'slept worse'} this week (${sleepChange > 0 ? '+' : ''}${sleepChange.toFixed(1)}h)`
+          : `Vous avez ${sleepChange > 0 ? 'mieux dormi' : 'moins bien dormi'} cette semaine (${sleepChange > 0 ? '+' : ''}${sleepChange.toFixed(1)}h)`,
         value: `${currentSleepAvg.toFixed(1)}/10`,
       });
     }
@@ -48,14 +54,18 @@ export const generateWeeklyInsights = (logs) => {
   // 3. Meilleure journée de la semaine
   const bestDay = findBestDay(currentWeekLogs);
   if (bestDay) {
-    const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+    const dayNames = isEn
+      ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+      : ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     const dayName = dayNames[bestDay.dayOfWeek];
     insights.push({
       id: 'best-day',
       type: 'positive',
       icon: 'star',
-      title: 'Meilleure journée',
-      message: `${dayName} était votre meilleur jour (humeur ${bestDay.mood}/5)`,
+      title: isEn ? 'Best day' : 'Meilleure journée',
+      message: isEn
+        ? `${dayName} was your best day (mood ${bestDay.mood}/5)`
+        : `${dayName} était votre meilleur jour (humeur ${bestDay.mood}/5)`,
       value: dayName,
     });
   }
@@ -63,29 +73,46 @@ export const generateWeeklyInsights = (logs) => {
   // 4. Symptômes principaux
   const topSymptoms = findTopSymptoms(currentWeekLogs, 2);
   if (topSymptoms.length > 0) {
-    const symptomLabels = {
-      hot_flashes: 'bouffées de chaleur',
-      night_sweats: 'sueurs nocturnes',
-      headaches: 'maux de tête',
-      joint_pain: 'douleurs articulaires',
-      fatigue: 'fatigue',
-      anxiety: 'anxiété',
-      irritability: 'irritabilité',
-      brain_fog: 'brouillard mental',
-      low_mood: 'humeur basse',
-    };
+    const symptomLabels = isEn
+      ? {
+          hot_flashes: 'hot flashes',
+          night_sweats: 'night sweats',
+          headaches: 'headaches',
+          joint_pain: 'joint pain',
+          fatigue: 'fatigue',
+          anxiety: 'anxiety',
+          irritability: 'irritability',
+          brain_fog: 'brain fog',
+          low_mood: 'low mood',
+        }
+      : {
+          hot_flashes: 'bouffées de chaleur',
+          night_sweats: 'sueurs nocturnes',
+          headaches: 'maux de tête',
+          joint_pain: 'douleurs articulaires',
+          fatigue: 'fatigue',
+          anxiety: 'anxiété',
+          irritability: 'irritabilité',
+          brain_fog: 'brouillard mental',
+          low_mood: 'humeur basse',
+        };
 
     const symptomList = topSymptoms
       .map(s => symptomLabels[s.symptom] || s.symptom)
-      .join(' et ');
+      .join(isEn ? ' and ' : ' et ');
+
+    const topCount = topSymptoms[0].count;
+    const dayLabel = isEn
+      ? (topCount === 1 ? 'day' : 'days')
+      : (topCount === 1 ? 'jour' : 'jours');
 
     insights.push({
       id: 'top-symptoms',
       type: 'warning',
       icon: 'pulse',
-      title: 'Symptômes principaux',
-      message: `Cette semaine : ${symptomList}`,
-      value: `${topSymptoms[0].count} jours`,
+      title: isEn ? 'Top symptoms' : 'Symptômes principaux',
+      message: isEn ? `This week: ${symptomList}` : `Cette semaine : ${symptomList}`,
+      value: `${topCount} ${dayLabel}`,
     });
   }
 
@@ -96,8 +123,12 @@ export const generateWeeklyInsights = (logs) => {
       id: 'time-pattern',
       type: 'info',
       icon: 'time',
-      title: 'Pattern observé',
-      message: morningPattern,
+      title: isEn ? 'Pattern spotted' : 'Pattern observé',
+      message: isEn
+        ? morningPattern
+            .replace('Vos symptômes sont plus fréquents le soir', 'Your symptoms are more frequent in the evening')
+            .replace('Vos symptômes sont plus fréquents le matin', 'Your symptoms are more frequent in the morning')
+        : morningPattern,
       value: '🕐',
     });
   }
@@ -109,9 +140,11 @@ export const generateWeeklyInsights = (logs) => {
       id: 'energy',
       type: energyAvg >= 3 ? 'positive' : 'info',
       icon: 'flash',
-      title: 'Niveau d\'énergie',
-      message: `Votre énergie moyenne est de ${energyAvg.toFixed(1)}/5`,
-      value: energyAvg >= 3 ? 'Bon' : 'À surveiller',
+      title: isEn ? 'Energy level' : "Niveau d'énergie",
+      message: isEn
+        ? `Your average energy is ${energyAvg.toFixed(1)}/5`
+        : `Votre énergie moyenne est de ${energyAvg.toFixed(1)}/5`,
+      value: isEn ? (energyAvg >= 3 ? 'Good' : 'To watch') : (energyAvg >= 3 ? 'Bon' : 'À surveiller'),
     });
   }
 
@@ -122,8 +155,10 @@ export const generateWeeklyInsights = (logs) => {
       id: 'consistency',
       type: 'positive',
       icon: 'checkmark-circle',
-      title: 'Excellent suivi',
-      message: `Vous avez complété ${currentWeekLogs.length}/7 check-ins cette semaine`,
+      title: isEn ? 'Great consistency' : 'Excellent suivi',
+      message: isEn
+        ? `You completed ${currentWeekLogs.length}/7 check-ins this week`
+        : `Vous avez complété ${currentWeekLogs.length}/7 check-ins cette semaine`,
       value: `${consistencyRate.toFixed(0)}%`,
     });
   }

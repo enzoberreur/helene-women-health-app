@@ -348,9 +348,9 @@ const NOTIFICATION_TIMING = [
       // Petit délai pour laisser le temps à React de mettre à jour
       setTimeout(() => {
         Alert.alert(
-          'Compte créé !',
-          'Bienvenue dans Hélène 🌸',
-          [{ text: 'OK' }]
+          t?.onboarding?.signupSuccess?.title ?? 'Compte créé !',
+          t?.onboarding?.signupSuccess?.message ?? 'Bienvenue dans Hélène',
+          [{ text: t?.common?.ok ?? 'OK' }]
         );
       }, 100);
 
@@ -359,9 +359,9 @@ const NOTIFICATION_TIMING = [
       const errorMessage = error.message || 'Une erreur est survenue';
       setError(errorMessage);
       Alert.alert(
-        'Erreur',
+        t?.common?.error ?? 'Erreur',
         errorMessage,
-        [{ text: 'OK' }]
+        [{ text: t?.common?.ok ?? 'OK' }]
       );
     } finally {
       setLoading(false);

@@ -45,14 +45,17 @@ export default function ProfileScreen({ navigation, user }) {
     { value: 'postmenopause', label: t.profile.postmenopause },
   ], [t]);
 
-  const availableGoals = [
-    { id: 'sleep', label: 'Améliorer mon sommeil', icon: 'moon' },
-    { id: 'energy', label: 'Augmenter mon énergie', icon: 'flash' },
-    { id: 'mood', label: 'Stabiliser mon humeur', icon: 'happy' },
-    { id: 'weight', label: 'Gérer mon poids', icon: 'fitness' },
-    { id: 'stress', label: 'Réduire le stress', icon: 'leaf' },
-    { id: 'symptoms', label: 'Gérer les symptômes', icon: 'medical' },
-  ];
+  const availableGoals = useMemo(() => {
+    const labels = t?.profile?.goalLabels || {};
+    return [
+      { id: 'sleep', label: labels?.sleep ?? 'Improve my sleep', icon: 'moon' },
+      { id: 'energy', label: labels?.energy ?? 'Increase my energy', icon: 'flash' },
+      { id: 'mood', label: labels?.mood ?? 'Stabilize my mood', icon: 'happy' },
+      { id: 'weight', label: labels?.weight ?? 'Manage my weight', icon: 'fitness' },
+      { id: 'stress', label: labels?.stress ?? 'Reduce stress', icon: 'leaf' },
+      { id: 'symptoms', label: labels?.symptoms ?? 'Manage symptoms', icon: 'medical' },
+    ];
+  }, [t]);
 
   useEffect(() => {
     loadProfile();
@@ -201,15 +204,15 @@ export default function ProfileScreen({ navigation, user }) {
 
       if (!logs || logs.length === 0) {
         Alert.alert(
-          'Pas de données',
-          'Vous devez avoir au moins quelques check-ins pour générer un rapport.',
-          [{ text: 'OK' }]
+          t.profile.noDataTitle,
+          t.profile.noDataMessage,
+          [{ text: t.common.ok }]
         );
         return;
       }
 
       // Générer les insights
-      const insights = generateWeeklyInsights(logs);
+      const insights = generateWeeklyInsights(logs, language);
 
       // Générer le PDF
       const result = await generateDoctorReport(profile, logs, insights);
@@ -243,15 +246,15 @@ export default function ProfileScreen({ navigation, user }) {
         await scheduleDailyReminder();
         setNotificationsEnabled(true);
         Alert.alert(
-          '🔔 Notifications activées',
-          'Vous recevrez un rappel quotidien à 21h pour faire votre check-in.',
-          [{ text: 'OK' }]
+          t.profile.notificationsEnabledTitle,
+          t.profile.notificationsEnabledMessage,
+          [{ text: t.common.ok }]
         );
       } else {
         Alert.alert(
-          'Permission refusée',
-          'Veuillez autoriser les notifications dans les réglages de votre appareil.',
-          [{ text: 'OK' }]
+          t.profile.permissionDeniedTitle,
+          t.profile.permissionDeniedMessage,
+          [{ text: t.common.ok }]
         );
         setNotificationsEnabled(false);
       }
@@ -260,9 +263,9 @@ export default function ProfileScreen({ navigation, user }) {
       await cancelDailyReminder();
       setNotificationsEnabled(false);
       Alert.alert(
-        '🔕 Notifications désactivées',
-        'Vous ne recevrez plus de rappels quotidiens.',
-        [{ text: 'OK' }]
+        t.profile.notificationsDisabledTitle,
+        t.profile.notificationsDisabledMessage,
+        [{ text: t.common.ok }]
       );
     }
   };
@@ -273,36 +276,26 @@ export default function ProfileScreen({ navigation, user }) {
       if (granted) {
         await sendTestNotification();
         Alert.alert(
-          '✅ Test envoyé',
-          'Vous devriez recevoir une notification de test dans quelques secondes.',
-          [{ text: 'OK' }]
+          t.profile.testSentTitle,
+          t.profile.testSentMessage,
+          [{ text: t.common.ok }]
         );
       } else {
         Alert.alert(
-          'Permission refusée',
-          'Veuillez autoriser les notifications pour tester.',
-          [{ text: 'OK' }]
+          t.profile.permissionDeniedTitle,
+          t.profile.permissionDeniedTestMessage,
+          [{ text: t.common.ok }]
         );
       }
     } catch (error) {
       console.error('Erreur test notification:', error);
-      Alert.alert('Erreur', 'Impossible d\'envoyer la notification de test.');
+      Alert.alert(t.common.error, t.profile.testErrorMessage);
     }
   };
 
   const getTreatmentTypeLabel = (type) => {
-    const labels = {
-      oral_estrogen: 'Estrogène oral',
-      transdermal_patch: 'Patch transdermique',
-      gel: 'Gel',
-      vaginal_estrogen: 'Estrogène vaginal',
-      combined_continuous: 'Combiné continu (E+P)',
-      combined_sequential: 'Combiné séquentiel',
-      progestogen_only: 'Progestérone seule',
-      tibolone: 'Tibolone',
-      other: 'Autre',
-    };
-    return labels[type] || type;
+    const labels = t?.profile?.treatmentTypes || {};
+    return labels?.[type] || type;
   };
 
   if (loading) {
@@ -348,7 +341,7 @@ export default function ProfileScreen({ navigation, user }) {
               style={styles.input}
               value={profile.age}
               onChangeText={(text) => setProfile(prev => ({ ...prev, age: text }))}
-              placeholder="Ex: 45"
+              placeholder={t.profile.agePlaceholder}
               keyboardType="numeric"
               maxLength={2}
             />
@@ -385,7 +378,7 @@ export default function ProfileScreen({ navigation, user }) {
         {/* Objectifs */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t.profile.goals}</Text>
-          <Text style={styles.subtitle}>Sélectionne ce sur quoi tu souhaites te concentrer</Text>
+          <Text style={styles.subtitle}>{t.profile.goalsSubtitle}</Text>
           
           <View style={styles.goalsGrid}>
             {availableGoals.map((goal) => (
@@ -478,7 +471,7 @@ export default function ProfileScreen({ navigation, user }) {
                 <View style={styles.treatmentRow}>
                   <Text style={styles.treatmentLabel}>{t.profile.startDate}</Text>
                   <Text style={styles.treatmentValue}>
-                    {new Date(treatment.start_date).toLocaleDateString('fr-FR', {
+                    {new Date(treatment.start_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric',
@@ -563,7 +556,7 @@ export default function ProfileScreen({ navigation, user }) {
               >
                 <Ionicons name="send" size={16} color={COLORS.primary} />
                 <Text style={styles.testNotificationText}>
-                  Envoyer une notification de test
+                  {t.profile.testNotification}
                 </Text>
               </TouchableOpacity>
             )}
@@ -574,7 +567,7 @@ export default function ProfileScreen({ navigation, user }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="information-circle-outline" size={24} color={COLORS.text} />
-            <Text style={styles.sectionTitle}>À propos</Text>
+            <Text style={styles.sectionTitle}>{t.about.title}</Text>
           </View>
           <TouchableOpacity
             style={styles.aboutButton}
@@ -582,7 +575,7 @@ export default function ProfileScreen({ navigation, user }) {
           >
             <View style={styles.aboutButtonContent}>
               <Ionicons name="heart" size={20} color={COLORS.primary} />
-              <Text style={styles.aboutButtonText}>Comment ça marche ?</Text>
+              <Text style={styles.aboutButtonText}>{t.about.howItWorks}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
@@ -592,7 +585,7 @@ export default function ProfileScreen({ navigation, user }) {
           >
             <View style={styles.aboutButtonContent}>
               <Ionicons name="shield-checkmark" size={20} color={COLORS.success} />
-              <Text style={styles.aboutButtonText}>Confidentialité & GDPR</Text>
+              <Text style={styles.aboutButtonText}>{t.about.privacy}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>

@@ -18,7 +18,79 @@ export const translations = {
       step: 'Étape',
       next: 'Suivant',
       start: 'Commencer',
+      continue: 'Continuer',
       creating: 'Création du compte...',
+
+      welcome: {
+        title: 'Bienvenue dans votre espace bien-être',
+        description: 'Comprenez vos symptômes, suivez votre évolution, partagez avec votre médecin.',
+        featureUnderstand: 'Comprenez vos symptômes',
+        featureTrack: 'Suivez votre évolution',
+        featureShare: 'Partagez avec votre médecin',
+        skipIntro: "Passer l'introduction",
+      },
+
+      roles: {
+        interpreter: {
+          title: "L'Interprète",
+          subtitle: 'Comprendre ce qui se passe',
+          description: "Hélène analyse vos symptômes et vous aide à comprendre les changements de votre corps avec des explications claires et personnalisées.",
+          example: '"Vous ressentez des bouffées de chaleur ? Hélène vous explique pourquoi elles surviennent et comment les gérer au quotidien."',
+        },
+        storyteller: {
+          title: 'La Conteuse',
+          subtitle: 'Voir votre histoire se dessiner',
+          description: "Hélène visualise votre parcours à travers des graphiques et des insights, révélant les patterns et tendances de votre bien-être.",
+          example: '"Découvrez que votre humeur s\'améliore les jours où vous dormez mieux, grâce aux graphiques et insights personnalisés."',
+        },
+        companion: {
+          title: 'La Compagne',
+          subtitle: 'Un soutien au quotidien',
+          description: "Hélène est là pour vous écouter, vous conseiller et vous accompagner avec bienveillance à chaque étape de votre parcours.",
+          example: '"Discutez librement avec Hélène de vos préoccupations, elle vous écoute et vous conseille avec empathie."',
+        },
+        exampleTitle: 'Par exemple',
+      },
+
+      value: {
+        title: "Ce qu'Hélène vous apporte",
+        subtitle: 'Un accompagnement complet pour votre bien-être',
+        points: {
+          dailyTracking: {
+            title: 'Suivi quotidien simple',
+            description: 'Notez vos symptômes en moins de 2 minutes par jour',
+          },
+          clearCharts: {
+            title: 'Visualisations claires',
+            description: 'Comprenez vos tendances avec des graphiques intuitifs',
+          },
+          conversationalAI: {
+            title: 'IA conversationnelle',
+            description: 'Posez vos questions et obtenez des réponses personnalisées',
+          },
+          medicalReports: {
+            title: 'Rapports médicaux',
+            description: 'Générez des PDF à partager avec votre médecin',
+          },
+          automaticInsights: {
+            title: 'Insights automatiques',
+            description: 'Recevez des analyses hebdomadaires de votre bien-être',
+          },
+          privacy: {
+            title: 'Confidentialité totale',
+            description: 'Vos données sont sécurisées et ne sont jamais partagées',
+          },
+        },
+        trustTitle: 'Conçu avec soin',
+        trustText:
+          "Hélène a été créée en collaboration avec des professionnels de santé et des femmes traversant la ménopause pour vous offrir le meilleur accompagnement possible.",
+        ctaCreateAccount: 'Créer mon compte',
+      },
+
+      signupSuccess: {
+        title: 'Compte créé !',
+        message: 'Bienvenue dans Hélène',
+      },
       
       // Step 0
       step0: {
@@ -203,6 +275,7 @@ export const translations = {
       title: 'Mon Profil',
       email: 'Email',
       age: 'Âge',
+      agePlaceholder: 'Ex: 45',
       ageYears: 'ans',
       menopauseStage: 'Phase de ménopause',
       perimenopause: 'Périménopause',
@@ -210,6 +283,15 @@ export const translations = {
       postmenopause: 'Post-ménopause',
       goals: 'Mes objectifs',
       goalsList: 'Objectifs sélectionnés',
+      goalsSubtitle: 'Sélectionne ce sur quoi tu souhaites te concentrer',
+      goalLabels: {
+        sleep: 'Améliorer mon sommeil',
+        energy: 'Augmenter mon énergie',
+        mood: 'Stabiliser mon humeur',
+        weight: 'Gérer mon poids',
+        stress: 'Réduire le stress',
+        symptoms: 'Gérer les symptômes',
+      },
       settings: 'Paramètres',
       language: 'Langue',
       french: 'Français',
@@ -217,13 +299,37 @@ export const translations = {
       medicalReport: 'Rapport médical',
       generateReport: 'Générer un rapport PDF',
       reportDescription: 'Rapport complet de vos symptômes et tendances pour votre médecin',
+      noDataTitle: 'Pas de données',
+      noDataMessage: 'Vous devez avoir au moins quelques check-ins pour générer un rapport.',
       notifications: 'Notifications',
       enableNotifications: 'Activer les notifications',
       notificationTime: 'Heure de rappel quotidien',
       notificationDescription: 'Recevez un rappel pour enregistrer votre état de santé',
+      testNotification: 'Envoyer une notification de test',
+      notificationsEnabledTitle: '🔔 Notifications activées',
+      notificationsEnabledMessage: 'Vous recevrez un rappel quotidien à 21h pour faire votre check-in.',
+      notificationsDisabledTitle: '🔕 Notifications désactivées',
+      notificationsDisabledMessage: 'Vous ne recevrez plus de rappels quotidiens.',
+      permissionDeniedTitle: 'Permission refusée',
+      permissionDeniedMessage: 'Veuillez autoriser les notifications dans les réglages de votre appareil.',
+      permissionDeniedTestMessage: 'Veuillez autoriser les notifications pour tester.',
+      testSentTitle: '✅ Test envoyé',
+      testSentMessage: 'Vous devriez recevoir une notification de test dans quelques secondes.',
+      testErrorMessage: "Impossible d'envoyer la notification de test.",
       hormoneTreatment: 'Traitement hormonal (THS)',
       treatmentActive: 'Traitement actif',
       treatmentType: 'Type',
+      treatmentTypes: {
+        oral_estrogen: 'Estrogène oral',
+        transdermal_patch: 'Patch transdermique',
+        gel: 'Gel',
+        vaginal_estrogen: 'Estrogène vaginal',
+        combined_continuous: 'Combiné continu (E+P)',
+        combined_sequential: 'Combiné séquentiel',
+        progestogen_only: 'Progestérone seule',
+        tibolone: 'Tibolone',
+        other: 'Autre',
+      },
       medication: 'Médicament',
       dosage: 'Dosage',
       startDate: 'Date de début',
@@ -237,6 +343,41 @@ export const translations = {
       saveError: 'Impossible de sauvegarder le profil',
       reportSuccess: 'Rapport généré avec succès',
       reportError: 'Erreur lors de la génération du rapport',
+    },
+
+    // Daily Check-In Screen
+    dailyCheckIn: {
+      title: 'Check-in quotidien',
+      moodQuestion: "Comment vous sentez-vous aujourd'hui ?",
+      energyTitle: "Niveau d'énergie",
+      sleepTitle: 'Qualité du sommeil',
+      energyLow: 'Très faible',
+      energyHigh: 'Excellent',
+      sleepLow: 'Très mauvaise',
+      sleepHigh: 'Excellente',
+      physicalSymptoms: 'Symptômes physiques',
+      mentalSymptoms: 'État mental & émotionnel',
+      notesTitle: 'Notes (optionnel)',
+      notesPlaceholder: "Comment s'est passée votre journée ? Notez ce que vous voulez...",
+      save: 'Enregistrer',
+      update: 'Mettre à jour',
+      saving: 'Enregistrement...',
+      savedTitle: '✅ Enregistré !',
+      savedMessage: 'Votre suivi quotidien a été enregistré.',
+      savedMessageWithEncouragement: 'Votre suivi quotidien a été enregistré.\n\n{emoji} {message}',
+      moodOptions: {
+        veryLow: 'Très bas',
+        low: 'Bas',
+        neutral: 'Neutre',
+        good: 'Bien',
+        excellent: 'Excellent',
+      },
+      intensity: {
+        none: 'Aucun',
+        mild: 'Léger',
+        moderate: 'Modéré',
+        severe: 'Sévère',
+      },
     },
 
     // Trends Screen
@@ -321,6 +462,7 @@ export const translations = {
     // Home Screen
     home: {
       hello: 'Bonjour',
+      headerSubtitle: "Comment allez-vous aujourd'hui ?",
       dailyCheckIn: 'Check-in quotidien',
       dailyCheckInSubtitle: 'Comment vous sentez-vous aujourd\'hui ?',
       trends: 'Mes tendances',
@@ -332,6 +474,56 @@ export const translations = {
       emptyTitle: 'Commencez votre suivi',
       emptyDescription: 'Faites votre premier check-in quotidien pour commencer à suivre votre santé et voir des informations personnalisées ici.',
       startCheckIn: 'Faire mon check-in',
+      thisWeek: 'Cette semaine',
+      viewMore: 'Voir plus',
+      weeklyInsightsTitle: '💡 Observations cette semaine',
+      mostFrequentSymptom: 'Symptôme le plus fréquent',
+      stats: {
+        mood: 'Humeur',
+        sleep: 'Sommeil',
+        days: 'Jours',
+      },
+      symptomLabels: {
+        hot_flashes: 'Bouffées de chaleur',
+        night_sweats: 'Sueurs nocturnes',
+        headaches: 'Maux de tête',
+        joint_pain: 'Douleurs articulaires',
+        fatigue: 'Fatigue',
+        anxiety: 'Anxiété',
+        irritability: 'Irritabilité',
+        brain_fog: 'Brouillard mental',
+        low_mood: 'Humeur basse',
+      },
+    },
+
+    // Emotional Journal Screen
+    journal: {
+      title: 'Journal Émotionnel',
+      analysisLast30Days: 'Analyse des 30 derniers jours',
+      trendMessages: {
+        improving: '📈 Votre bien-être émotionnel s\'améliore !',
+        declining: '📉 Prenez soin de vous, n\'hésitez pas à en parler.',
+        stable: '➡️ Votre bien-être émotionnel est stable.',
+      },
+      stats: {
+        positiveDays: 'Jours positifs',
+        neutralDays: 'Jours neutres',
+        difficultDays: 'Jours difficiles',
+      },
+      averageScore: 'Score de bien-être moyen',
+      latestNotes: 'Vos dernières notes',
+      emptyTitle: 'Aucune note pour le moment',
+      emptyDescription: 'Commencez à écrire vos ressentis lors de vos check-ins quotidiens',
+      sentimentLabels: {
+        positive: 'Positif',
+        neutral: 'Neutre',
+        negative: 'Difficile',
+      },
+      indicators: {
+        mood: 'Humeur',
+        sleep: 'Sommeil',
+        energy: 'Énergie',
+      },
     },
   },
   
@@ -354,7 +546,79 @@ export const translations = {
       step: 'Step',
       next: 'Next',
       start: 'Get started',
+      continue: 'Continue',
       creating: 'Creating account...',
+
+      welcome: {
+        title: 'Welcome to your wellness space',
+        description: 'Understand your symptoms, track your progress, share with your doctor.',
+        featureUnderstand: 'Understand your symptoms',
+        featureTrack: 'Track your progress',
+        featureShare: 'Share with your doctor',
+        skipIntro: 'Skip introduction',
+      },
+
+      roles: {
+        interpreter: {
+          title: 'The Interpreter',
+          subtitle: 'Understand what’s happening',
+          description: 'Helene analyzes your symptoms and helps you understand changes in your body with clear, personalized explanations.',
+          example: '"Having hot flashes? Helene explains why they happen and how to manage them day to day."',
+        },
+        storyteller: {
+          title: 'The Storyteller',
+          subtitle: 'See your story unfold',
+          description: 'Helene visualizes your journey with charts and insights, revealing patterns and trends in your wellbeing.',
+          example: '"See that your mood improves on days you sleep better, thanks to personalized charts and insights."',
+        },
+        companion: {
+          title: 'The Companion',
+          subtitle: 'Support, every day',
+          description: 'Helene is here to listen, guide, and support you with care at every step of your journey.',
+          example: '"Talk freely with Helene about your concerns—she listens and supports you with empathy."',
+        },
+        exampleTitle: 'For example',
+      },
+
+      value: {
+        title: 'What Helene brings you',
+        subtitle: 'Complete support for your wellbeing',
+        points: {
+          dailyTracking: {
+            title: 'Simple daily tracking',
+            description: 'Log your symptoms in under 2 minutes a day',
+          },
+          clearCharts: {
+            title: 'Clear visuals',
+            description: 'Understand your trends with intuitive charts',
+          },
+          conversationalAI: {
+            title: 'Conversational AI',
+            description: 'Ask questions and get personalized answers',
+          },
+          medicalReports: {
+            title: 'Medical reports',
+            description: 'Generate PDFs to share with your doctor',
+          },
+          automaticInsights: {
+            title: 'Automatic insights',
+            description: 'Receive weekly wellbeing summaries and analysis',
+          },
+          privacy: {
+            title: 'Full privacy',
+            description: 'Your data is secure and never shared',
+          },
+        },
+        trustTitle: 'Built with care',
+        trustText:
+          'Helene was created with healthcare professionals and women experiencing menopause to offer the best possible support.',
+        ctaCreateAccount: 'Create my account',
+      },
+
+      signupSuccess: {
+        title: 'Account created!',
+        message: 'Welcome to Helene',
+      },
       
       // Step 0
       step0: {
@@ -527,6 +791,7 @@ export const translations = {
       title: 'My Profile',
       email: 'Email',
       age: 'Age',
+      agePlaceholder: 'e.g. 45',
       ageYears: 'years',
       menopauseStage: 'Menopause Stage',
       perimenopause: 'Perimenopause',
@@ -534,6 +799,15 @@ export const translations = {
       postmenopause: 'Post-menopause',
       goals: 'My Goals',
       goalsList: 'Selected goals',
+      goalsSubtitle: 'Select what you want to focus on',
+      goalLabels: {
+        sleep: 'Improve my sleep',
+        energy: 'Increase my energy',
+        mood: 'Stabilize my mood',
+        weight: 'Manage my weight',
+        stress: 'Reduce stress',
+        symptoms: 'Manage symptoms',
+      },
       settings: 'Settings',
       language: 'Language',
       french: 'Français',
@@ -541,13 +815,37 @@ export const translations = {
       medicalReport: 'Medical Report',
       generateReport: 'Generate PDF Report',
       reportDescription: 'Create a detailed report for your doctor',
+      noDataTitle: 'No data',
+      noDataMessage: 'You need at least a few check-ins to generate a report.',
       notifications: 'Notifications',
       enableNotifications: 'Enable notifications',
       notificationTime: 'Daily reminder time',
       notificationDescription: 'Receive a reminder to log your health status',
+      testNotification: 'Send a test notification',
+      notificationsEnabledTitle: '🔔 Notifications enabled',
+      notificationsEnabledMessage: 'You will receive a daily reminder at 9pm to complete your check-in.',
+      notificationsDisabledTitle: '🔕 Notifications disabled',
+      notificationsDisabledMessage: 'You will no longer receive daily reminders.',
+      permissionDeniedTitle: 'Permission denied',
+      permissionDeniedMessage: 'Please allow notifications in your device settings.',
+      permissionDeniedTestMessage: 'Please allow notifications to run a test.',
+      testSentTitle: '✅ Test sent',
+      testSentMessage: 'You should receive a test notification in a few seconds.',
+      testErrorMessage: "Unable to send the test notification.",
       hormoneTreatment: 'Hormone Treatment (HRT)',
       treatmentActive: 'Active treatment',
       treatmentType: 'Type',
+      treatmentTypes: {
+        oral_estrogen: 'Oral estrogen',
+        transdermal_patch: 'Transdermal patch',
+        gel: 'Gel',
+        vaginal_estrogen: 'Vaginal estrogen',
+        combined_continuous: 'Combined continuous (E+P)',
+        combined_sequential: 'Combined sequential',
+        progestogen_only: 'Progesterone only',
+        tibolone: 'Tibolone',
+        other: 'Other',
+      },
       medication: 'Medication',
       dosage: 'Dosage',
       startDate: 'Start date',
@@ -561,6 +859,41 @@ export const translations = {
       saveError: 'Unable to save profile',
       reportSuccess: 'Report generated successfully',
       reportError: 'Error generating report',
+    },
+
+    // Daily Check-In Screen
+    dailyCheckIn: {
+      title: 'Daily check-in',
+      moodQuestion: 'How are you feeling today?',
+      energyTitle: 'Energy level',
+      sleepTitle: 'Sleep quality',
+      energyLow: 'Very low',
+      energyHigh: 'Excellent',
+      sleepLow: 'Very poor',
+      sleepHigh: 'Excellent',
+      physicalSymptoms: 'Physical symptoms',
+      mentalSymptoms: 'Mental & emotional state',
+      notesTitle: 'Notes (optional)',
+      notesPlaceholder: 'How was your day? Write anything you want...',
+      save: 'Save',
+      update: 'Update',
+      saving: 'Saving...',
+      savedTitle: '✅ Saved!',
+      savedMessage: 'Your daily check-in has been saved.',
+      savedMessageWithEncouragement: 'Your daily check-in has been saved.\n\n{emoji} {message}',
+      moodOptions: {
+        veryLow: 'Very low',
+        low: 'Low',
+        neutral: 'Neutral',
+        good: 'Good',
+        excellent: 'Excellent',
+      },
+      intensity: {
+        none: 'None',
+        mild: 'Mild',
+        moderate: 'Moderate',
+        severe: 'Severe',
+      },
     },
     
     // Trends Screen
@@ -650,6 +983,7 @@ export const translations = {
     // Home Screen
     home: {
       hello: 'Hello',
+      headerSubtitle: 'How are you today?',
       dailyCheckIn: 'Daily Check-in',
       dailyCheckInSubtitle: 'How are you feeling today?',
       trends: 'My trends',
@@ -661,6 +995,56 @@ export const translations = {
       emptyTitle: 'Start your tracking',
       emptyDescription: 'Do your first daily check-in to start tracking your health and see personalized information here.',
       startCheckIn: 'Do my check-in',
+      thisWeek: 'This week',
+      viewMore: 'See more',
+      weeklyInsightsTitle: "💡 This week's insights",
+      mostFrequentSymptom: 'Most frequent symptom',
+      stats: {
+        mood: 'Mood',
+        sleep: 'Sleep',
+        days: 'Days',
+      },
+      symptomLabels: {
+        hot_flashes: 'Hot flashes',
+        night_sweats: 'Night sweats',
+        headaches: 'Headaches',
+        joint_pain: 'Joint pain',
+        fatigue: 'Fatigue',
+        anxiety: 'Anxiety',
+        irritability: 'Irritability',
+        brain_fog: 'Brain fog',
+        low_mood: 'Low mood',
+      },
+    },
+
+    // Emotional Journal Screen
+    journal: {
+      title: 'Emotional Journal',
+      analysisLast30Days: 'Analysis of the last 30 days',
+      trendMessages: {
+        improving: '📈 Your emotional well-being is improving!',
+        declining: "📉 Take care of yourself—consider talking to someone you trust.",
+        stable: '➡️ Your emotional well-being is stable.',
+      },
+      stats: {
+        positiveDays: 'Positive days',
+        neutralDays: 'Neutral days',
+        difficultDays: 'Tough days',
+      },
+      averageScore: 'Average well-being score',
+      latestNotes: 'Your latest notes',
+      emptyTitle: 'No notes yet',
+      emptyDescription: 'Start writing how you feel during your daily check-ins',
+      sentimentLabels: {
+        positive: 'Positive',
+        neutral: 'Neutral',
+        negative: 'Tough',
+      },
+      indicators: {
+        mood: 'Mood',
+        sleep: 'Sleep',
+        energy: 'Energy',
+      },
     },
   },
 };
