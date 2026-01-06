@@ -1,9 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
 
-// ⚠️ IMPORTANT: Remplacez ces valeurs par vos propres clés Supabase
-// Vous les trouverez dans votre dashboard Supabase: Settings > API
-const SUPABASE_URL = 'https://kbmdfrknotewmonzuaev.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtibWRmcmtub3Rld21vbnp1YWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1NDQwOTksImV4cCI6MjA4MzEyMDA5OX0.aN8yPvM-CqFTS_PGbT2VsEZssysvAsO3PQuFdmPtLFM';
+const extra = Constants?.expoConfig?.extra ?? Constants?.manifest?.extra ?? {};
+const SUPABASE_URL = extra.supabaseUrl;
+const SUPABASE_ANON_KEY = extra.supabaseAnonKey;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn(
+    '[supabase] Missing config. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in .env'
+  );
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {

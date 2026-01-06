@@ -1,6 +1,9 @@
-// ⚠️ IMPORTANT: En production, stockez cette clé dans un fichier .env
-const API_KEY = 'AIzaSyBvT-5vSxXtBoTam_d7lbVDNgs9gHVtW4c';
-const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+import Constants from 'expo-constants';
+
+const extra = Constants?.expoConfig?.extra ?? Constants?.manifest?.extra ?? {};
+const API_KEY = extra.geminiApiKey;
+const MODEL = extra.geminiModel || 'gemini-2.0-flash';
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 // Configuration du modèle
 const modelConfig = {
@@ -61,6 +64,10 @@ export async function generateChatResponse(userMessage, userContext = {}, conver
     console.log('🎭 Mode démo activé - Réponse simulée...');
     await new Promise(resolve => setTimeout(resolve, 1200)); // Simuler délai API
     return generateDemoResponse(userMessage, userContext);
+  }
+
+  if (!API_KEY) {
+    throw new Error('Missing Gemini API key. Set EXPO_PUBLIC_GEMINI_API_KEY in .env');
   }
 
   try {

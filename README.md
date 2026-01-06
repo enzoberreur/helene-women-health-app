@@ -51,19 +51,27 @@ npm run android
 ```
 
 ## Configure Supabase & AI
-This repo currently includes placeholder / development credentials in code.
-For a real deployment, move secrets to environment variables and update the client initializers:
+Create a `.env` file (never commit it) based on `.env.example`.
 
-- Supabase client: `src/lib/supabase.js`
-- Gemini client: `src/lib/gemini.js`
+Required:
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+
+Optional (only if you disable demo mode):
+- `EXPO_PUBLIC_GEMINI_API_KEY`
+- `EXPO_PUBLIC_GEMINI_MODEL`
+
+Runtime config is injected via `app.config.js` and read in:
+- `src/lib/supabase.js`
+- `src/lib/gemini.js`
 
 ## Database (Supabase)
 SQL scripts are included to bootstrap and evolve the schema:
-- `supabase-schema-v2.sql`
-- `supabase-trigger-v2.sql`
-- `supabase-daily-logs.sql`
-- `supabase-sentiment-migration.sql`
-- `supabase-treatment-migration.sql`
+- `supabase/schema-v2.sql`
+- `supabase/trigger-v2.sql`
+- `supabase/daily-logs.sql`
+- `supabase/sentiment-migration.sql`
+- `supabase/treatment-migration.sql`
 
 ## Project structure
 ```
