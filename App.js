@@ -30,6 +30,7 @@ import { setupDeepLinking } from './src/utils/linking';
 import { supabase } from './src/lib/supabase';
 import { getTranslation } from './src/i18n/translations';
 import { COLORS } from './src/constants/theme';
+import { runDbHealthCheck } from './src/utils/dbHealthCheck';
 
 export const LanguageContext = createContext();
 
@@ -68,6 +69,26 @@ export default function App() {
       console.log('Auth event:', event);
 
       if (session?.user) {
+        // Ensure a profile row exists (some DB setups might not have the trigger installed yet).
+        // Retry without email if the column isn't present.
+        try {
+          let upsertError;
+          ({ error: upsertError } = await supabase
+            .from('profiles')
+            .upsert({ id: session.user.id, email: session.user.email }, { onConflict: 'id' }));
+
+          const isUndefinedColumn = upsertError?.code === '42703' || /column .* does not exist/i.test(upsertError?.message || '');
+          const isEmailColumnError = /\bemail\b/i.test(upsertError?.message || '');
+
+          if (upsertError && isUndefinedColumn && isEmailColumnError) {
+            await supabase
+              .from('profiles')
+              .upsert({ id: session.user.id }, { onConflict: 'id' });
+          }
+        } catch (e) {
+          console.log('Profile upsert skipped:', e?.message || e);
+        }
+
         // Récupérer le profil de l'utilisateur
         const { data: profile, error } = await supabase
           .from('profiles')
@@ -80,6 +101,15 @@ export default function App() {
         }
 
         setUser({ ...session.user, ...(profile || {}) });
+
+        // Non-UI DB connectivity checklist (logs only)
+        // - Read-only in production
+        // - In dev, also verifies we can upsert today's daily log
+        runDbHealthCheck({
+          userId: session.user.id,
+          allowWriteTest: typeof __DEV__ !== 'undefined' ? __DEV__ : false,
+        });
+
         setCurrentScreen('home');
         setScreenStack(['home']); // Reset stack à home après connexion
       } else {

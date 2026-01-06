@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useMemo } from 'react';
+import React, { useState, useContext, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -67,6 +67,7 @@ export default function DailyCheckInScreen({ navigation, user }) {
   };
   const [loading, setLoading] = useState(false);
   const [existingLog, setExistingLog] = useState(null);
+  const [activeDate, setActiveDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   // État du formulaire
   const [mood, setMood] = useState(3);
@@ -87,52 +88,92 @@ export default function DailyCheckInScreen({ navigation, user }) {
   });
   const [notes, setNotes] = useState('');
 
+  const getTodayString = () => new Date().toISOString().split('T')[0];
+
+  const resetFormToDefaults = useCallback(() => {
+    setMood(3);
+    setEnergyLevel(3);
+    setSleepQuality(3);
+    setPhysicalSymptoms({
+      hot_flashes: 0,
+      night_sweats: 0,
+      headaches: 0,
+      joint_pain: 0,
+      fatigue: 0,
+    });
+    setMentalSymptoms({
+      anxiety: 0,
+      irritability: 0,
+      brain_fog: 0,
+      low_mood: 0,
+    });
+    setNotes('');
+  }, []);
+
   // Charger le log du jour si il existe
   useEffect(() => {
     loadTodayLog();
   }, []);
 
+  // Si l'app reste ouverte sur l'écran pendant minuit, recharger automatiquement.
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const today = getTodayString();
+      if (today !== activeDate) {
+        setActiveDate(today);
+        loadTodayLog();
+      }
+    }, 60 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [activeDate]);
+
   const loadTodayLog = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayString();
       const { data, error } = await supabase
         .from('daily_logs')
         .select('*')
         .eq('user_id', user.id)
         .eq('log_date', today)
-        .single();
+        .maybeSingle();
 
-      if (data) {
-        setExistingLog(data);
-        setMood(data.mood || 3);
-        setEnergyLevel(data.energy_level || 3);
-        setSleepQuality(data.sleep_quality || 3);
-        setPhysicalSymptoms({
-          hot_flashes: data.hot_flashes || 0,
-          night_sweats: data.night_sweats || 0,
-          headaches: data.headaches || 0,
-          joint_pain: data.joint_pain || 0,
-          fatigue: data.fatigue || 0,
-        });
-        setMentalSymptoms({
-          anxiety: data.anxiety || 0,
-          irritability: data.irritability || 0,
-          brain_fog: data.brain_fog || 0,
-          low_mood: data.low_mood || 0,
-        });
-        setNotes(data.notes || '');
+      if (error) throw error;
+
+      // Important: si aucun log aujourd'hui, on reset le formulaire
+      if (!data) {
+        setExistingLog(null);
+        resetFormToDefaults();
+        return;
       }
+
+      setExistingLog(data);
+      setMood(data.mood || 3);
+      setEnergyLevel(data.energy_level || 3);
+      setSleepQuality(data.sleep_quality || 3);
+      setPhysicalSymptoms({
+        hot_flashes: data.hot_flashes || 0,
+        night_sweats: data.night_sweats || 0,
+        headaches: data.headaches || 0,
+        joint_pain: data.joint_pain || 0,
+        fatigue: data.fatigue || 0,
+      });
+      setMentalSymptoms({
+        anxiety: data.anxiety || 0,
+        irritability: data.irritability || 0,
+        brain_fog: data.brain_fog || 0,
+        low_mood: data.low_mood || 0,
+      });
+      setNotes(data.notes || '');
     } catch (error) {
-      if (error.code !== 'PGRST116') { // Ignore "not found" error
-        console.error('Erreur chargement log:', error);
-      }
+      console.error('Erreur chargement log:', error);
     }
   };
 
   const handleSave = async () => {
     try {
       setLoading(true);
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayString();
 
       // Analyser le sentiment des notes
       let sentimentAnalysis = null;
@@ -157,21 +198,36 @@ export default function DailyCheckInScreen({ navigation, user }) {
         notes_sentiment_emoji: sentimentAnalysis?.emoji || null,
       };
 
+      // Upsert = 1 log / jour / utilisatrice, sans risque d'écraser l'historique
+      let saved;
       let error;
-      if (existingLog) {
-        // Update
-        ({ error } = await supabase
+
+      ({ data: saved, error } = await supabase
+        .from('daily_logs')
+        .upsert(logData, { onConflict: 'user_id,log_date' })
+        .select()
+        .single());
+
+      // Fallback: if the sentiment migration hasn't been applied yet,
+      // retry without sentiment columns so users can still save their logs.
+      const isUndefinedColumn = error?.code === '42703' || /column .* does not exist/i.test(error?.message || '');
+      const isSentimentColumnError = /notes_sentiment|notes_sentiment_score|notes_sentiment_emoji/i.test(error?.message || '');
+
+      if (error && isUndefinedColumn && isSentimentColumnError) {
+        const fallbackLogData = { ...logData };
+        delete fallbackLogData.notes_sentiment;
+        delete fallbackLogData.notes_sentiment_score;
+        delete fallbackLogData.notes_sentiment_emoji;
+
+        ({ data: saved, error } = await supabase
           .from('daily_logs')
-          .update(logData)
-          .eq('id', existingLog.id));
-      } else {
-        // Insert
-        ({ error } = await supabase
-          .from('daily_logs')
-          .insert([logData]));
+          .upsert(fallbackLogData, { onConflict: 'user_id,log_date' })
+          .select()
+          .single());
       }
 
       if (error) throw error;
+      setExistingLog(saved ?? null);
 
       // Message personnalisé avec encouragement
       const alertMessage = sentimentAnalysis

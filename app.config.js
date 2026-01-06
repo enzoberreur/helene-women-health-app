@@ -11,5 +11,6 @@ module.exports = ({ config }) => ({
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     geminiApiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY,
     geminiModel: process.env.EXPO_PUBLIC_GEMINI_MODEL || 'gemini-2.0-flash',
+    geminiDemoMode: process.env.EXPO_PUBLIC_GEMINI_DEMO_MODE,
   },
 });

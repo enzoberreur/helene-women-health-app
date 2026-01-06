@@ -19,7 +19,7 @@ import { generateChatResponse } from '../lib/gemini';
 import { LanguageContext } from '../../App';
 
 export default function ChatScreen({ navigation, user }) {
-  const { t } = useContext(LanguageContext);
+  const { t, language } = useContext(LanguageContext);
   const flatListRef = useRef(null);
   
   const [messages, setMessages] = useState([
@@ -70,6 +70,7 @@ Comment puis-je vous aider aujourd'hui ?`,
 
       // Analyser les symptômes des 7 derniers jours
       let contextSummary = '';
+      let recentSymptoms = {};
       if (recentLogs && recentLogs.length > 0) {
         const symptoms = ['hot_flashes', 'night_sweats', 'headaches', 'joint_pain', 'fatigue', 'anxiety', 'irritability', 'brain_fog', 'low_mood'];
         const symptomLabels = {
@@ -88,6 +89,14 @@ Comment puis-je vous aider aujourd'hui ?`,
         symptoms.forEach(symptom => {
           symptomCounts[symptom] = recentLogs.filter(log => log[symptom] && log[symptom] > 0).length;
         });
+
+        // Expose a compact “recent symptoms” object to the AI (frequency over last 7 days)
+        // Example: { hot_flashes: 3, anxiety: 2 }
+        recentSymptoms = Object.fromEntries(
+          Object.entries(symptomCounts)
+            .filter(([_, count]) => count > 0)
+            .slice(0, 6)
+        );
 
         const topSymptoms = Object.entries(symptomCounts)
           .filter(([_, count]) => count > 0)
@@ -111,7 +120,9 @@ Comment puis-je vous aider aujourd'hui ?`,
         menopauseStage: profile?.menopause_stage,
         goals: profile?.goals || [],
         recentLogs: recentLogs || [],
+        recentSymptoms,
         contextSummary,
+        language,
       });
 
       // Mettre à jour le message d'accueil avec le contexte
@@ -184,9 +195,16 @@ Comment puis-je vous aider aujourd'hui ?`,
       }, 100);
     } catch (error) {
       console.error('Erreur chat:', error);
+      const message = error?.message || '';
+      const isMissingKey = /Missing Gemini API key/i.test(message);
       Alert.alert(
         'Erreur',
-        'Je rencontre un problème technique. Peux-tu réessayer dans un instant ? 🙏'
+        isMissingKey
+          ? (typeof __DEV__ !== 'undefined' && __DEV__
+            ? 'Chatbot non configuré: ajoute EXPO_PUBLIC_GEMINI_API_KEY dans .env puis redémarre Expo.'
+            : 'Chatbot temporairement indisponible. Réessaie plus tard.'
+          )
+          : 'Je rencontre un problème technique. Peux-tu réessayer dans un instant ? 🙏'
       );
     } finally {
       setIsLoading(false);

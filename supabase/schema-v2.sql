@@ -5,6 +5,9 @@ DROP TABLE IF EXISTS profiles CASCADE;
 
 CREATE TABLE profiles (
   id UUID REFERENCES auth.users(id) PRIMARY KEY,
+
+  -- Basic identity (copied from auth.users by trigger)
+  email TEXT,
   
   -- Phase 1: Informations de base
   age INTEGER,

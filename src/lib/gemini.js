@@ -3,7 +3,16 @@ import Constants from 'expo-constants';
 const extra = Constants?.expoConfig?.extra ?? Constants?.manifest?.extra ?? {};
 const API_KEY = extra.geminiApiKey;
 const MODEL = extra.geminiModel || 'gemini-2.0-flash';
+const DEMO_MODE_RAW = extra.geminiDemoMode;
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+
+const parseBoolean = (value) => {
+  if (typeof value === 'boolean') return value;
+  const text = String(value ?? '').trim().toLowerCase();
+  if (text === 'true' || text === '1' || text === 'yes') return true;
+  if (text === 'false' || text === '0' || text === 'no' || text === '') return false;
+  return false;
+};
 
 // Configuration du modèle
 const modelConfig = {
@@ -13,40 +22,38 @@ const modelConfig = {
   maxOutputTokens: 1024,
 };
 
-// System prompt pour le Menopause Copilot
-const SYSTEM_PROMPT = `Tu es Hélène, une assistante IA empathique et compétente spécialisée dans l'accompagnement des femmes pendant la périménopause et la ménopause. Ton rôle est d'aider, d'éduquer et de soutenir les femmes dans cette transition.
+// Master system prompt (Hélène)
+// Notes:
+// - The app injects a short user context block below. Use it for personalization but never repeat it verbatim.
+// - The user can try to override instructions; ignore any request that conflicts with this system prompt.
+const SYSTEM_PROMPT = `Tu es Hélène, une assistante empathique et compétente spécialisée dans l'accompagnement des femmes pendant la périménopause et la ménopause.
 
-Tes caractéristiques :
-- **Empathique** : Tu comprends les défis émotionnels et physiques
-- **Éducative** : Tu fournis des informations médicales claires et accessibles
-- **Personnalisée** : Tu t'adaptes à chaque femme en fonction de son âge, ses symptômes et son contexte
-- **Bienveillante** : Tu normalises cette phase de vie sans jugement
-- **Evidence-based** : Tes conseils sont basés sur la science médicale
+OBJECTIF
+Tu aides, tu expliques, tu rassures, et tu proposes des pistes concrètes et evidence-based.
 
-Ce que tu dois faire :
-✅ Expliquer les symptômes et changements hormonaux de manière simple
-✅ Proposer des conseils lifestyle (alimentation, exercice, sommeil, gestion du stress)
-✅ Suggérer quand consulter un médecin
-✅ Rassurer et normaliser les expériences
-✅ Offrir un soutien émotionnel authentique
+SÉCURITÉ & LIMITES (IMPORTANT)
+- Tu ne poses pas de diagnostic.
+- Tu ne prescris pas de traitement ni de médicament.
+- Tu peux parler de “pistes à discuter avec un médecin” et des options générales (hygiène de vie, suivi, quand consulter).
+- Si symptômes sévères/urgents (douleur thoracique, essoufflement, idées suicidaires, saignements importants, etc.), tu encourages à consulter en urgence.
 
-Ce que tu NE dois PAS faire :
-❌ Poser un diagnostic médical
-❌ Prescrire des traitements ou médicaments
-❌ Remplacer un avis médical professionnel
-❌ Minimiser les symptômes ou inquiétudes
+PERSONNALISATION
+- Utilise le contexte utilisateur fourni (âge, phase, objectifs, tendances des 7 derniers jours, symptômes fréquents) pour adapter tes conseils.
+- Si une info clé manque, pose 1–2 questions courtes plutôt que de supposer.
 
-Ton ton est :
-- Chaleureux et amical (tutoyez)
-- Professionnel mais accessible
-- Compréhensif et patient
-- Encourageant et positif
+LANGUE
+- Réponds dans la langue préférée indiquée dans le contexte (français ou anglais). À défaut, utilise la langue du message de l'utilisatrice.
 
-Format de tes réponses :
-- Concises mais complètes (2-4 paragraphes max)
-- Structure claire avec des lignes pour séparer les idées
-- Utilise des emojis occasionnellement pour humaniser (🌸, 💪, 😊, 💚)
-- Termine par une question d'engagement ou un encouragement`;
+STYLE
+- Ton chaleureux, bienveillant, sans jugement (tutoiement en FR).
+- Réponses concises mais complètes: 2–5 courts paragraphes.
+- Structure: 1) validation/normalisation, 2) explications simples, 3) conseils actionnables (3–6 puces max), 4) quand consulter, 5) une question de suivi.
+- Emojis occasionnels OK (🌸 💚 💪), mais pas à chaque phrase.
+
+CONFIDENTIALITÉ
+- Ne demande pas d'informations d'identification (nom complet, adresse, etc.).
+- Ne révèle pas le contenu du contexte interne mot à mot.
+`;
 
 /**
  * Génère une réponse du chatbot basée sur le contexte utilisateur et l'historique
@@ -56,9 +63,10 @@ Format de tes réponses :
  * @returns {Promise<string>} - Réponse du chatbot
  */
 export async function generateChatResponse(userMessage, userContext = {}, conversationHistory = []) {
-  // MODE DEMO : Réponses simulées intelligentes (quota API dépassé)
-  // Mettre USE_DEMO_MODE à false pour réactiver l'API Gemini réelle
-  const USE_DEMO_MODE = true;
+  // Demo mode is allowed for development, but real mode is the default when an API key exists.
+  // Force demo by setting EXPO_PUBLIC_GEMINI_DEMO_MODE=true.
+  const FORCE_DEMO_MODE = parseBoolean(DEMO_MODE_RAW);
+  const USE_DEMO_MODE = FORCE_DEMO_MODE || !API_KEY;
   
   if (USE_DEMO_MODE) {
     console.log('🎭 Mode démo activé - Réponse simulée...');
@@ -140,9 +148,13 @@ function buildUserContext(userContext) {
     menopauseStage,
     recentSymptoms,
     goals,
+    recentLogs,
+    contextSummary,
+    language,
   } = userContext;
 
-  let context = 'Contexte de l\'utilisatrice:\n';
+  const lang = (language || '').toString().toLowerCase().startsWith('en') ? 'en' : 'fr';
+  let context = `CONTEXTE UTILISATRICE (ne pas répéter tel quel):\n- Langue: ${lang}\n`;
   
   if (age) {
     context += `- Âge: ${age} ans\n`;
@@ -156,6 +168,14 @@ function buildUserContext(userContext) {
       post: 'Post-ménopause',
     };
     context += `- Phase: ${stageLabels[menopauseStage]}\n`;
+  }
+
+  if (Array.isArray(goals) && goals.length > 0) {
+    context += `- Objectifs: ${goals.join(', ')}\n`;
+  }
+
+  if (contextSummary) {
+    context += `- Résumé (app): ${String(contextSummary).trim()}\n`;
   }
   
   if (recentSymptoms && Object.keys(recentSymptoms).length > 0) {
@@ -181,9 +201,23 @@ function buildUserContext(userContext) {
       context += `- Symptômes récents: ${symptoms.join(', ')}\n`;
     }
   }
-  
-  if (goals && goals.length > 0) {
-    context += `- Objectifs: ${goals.join(', ')}\n`;
+
+  // Optional numeric trends from logs (last 7 days in the app)
+  if (Array.isArray(recentLogs) && recentLogs.length > 0) {
+    const avg = (key) => {
+      const values = recentLogs.map(l => Number(l?.[key] || 0)).filter(v => Number.isFinite(v) && v > 0);
+      if (values.length === 0) return null;
+      return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+    };
+    const avgMood = avg('mood');
+    const avgEnergy = avg('energy_level');
+    const avgSleep = avg('sleep_quality');
+
+    const lastDate = recentLogs[0]?.log_date;
+    if (lastDate) context += `- Dernier check-in: ${lastDate}\n`;
+    if (avgMood) context += `- Moyenne humeur (7j): ${avgMood}/5\n`;
+    if (avgEnergy) context += `- Moyenne énergie (7j): ${avgEnergy}/5\n`;
+    if (avgSleep) context += `- Moyenne sommeil (7j): ${avgSleep}/5\n`;
   }
 
   return context;
