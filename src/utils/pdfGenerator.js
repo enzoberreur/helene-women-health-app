@@ -322,7 +322,7 @@ export const generateDoctorReport = async (userData, logs, insights) => {
 
             <div style="background: #FCECEF; border-radius: 8px; padding: 15px; margin-top: 15px;">
               <p style="font-size: 13px; color: #1F1F1F; line-height: 1.6;">
-                <strong>💡 Recommandation:</strong> ${menqolScore.recommendation}
+                <strong>Recommandation:</strong> ${menqolScore.recommendation}
               </p>
             </div>
 

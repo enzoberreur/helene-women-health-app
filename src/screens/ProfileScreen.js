@@ -9,6 +9,9 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,12 +35,27 @@ export default function ProfileScreen({ navigation, user }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [treatment, setTreatment] = useState(null);
   const [showTreatmentModal, setShowTreatmentModal] = useState(false);
+  const [treatmentSaving, setTreatmentSaving] = useState(false);
+  const [treatmentDraft, setTreatmentDraft] = useState({
+    id: null,
+    treatment_type: 'oral_estrogen',
+    treatment_name: '',
+    dosage: '',
+    start_date: new Date().toISOString().slice(0, 10),
+  });
   const [profile, setProfile] = useState({
     email: user?.email || '',
     age: '',
     menopause_stage: 'perimenopause',
     goals: [],
   });
+
+  const logSupabaseError = (context, error) => {
+    const code = error?.code ? ` (${error.code})` : '';
+    const message = error?.message ? `: ${error.message}` : '';
+    // Keep logs concise to avoid noisy in-app overlays.
+    console.log(`${context}${message}${code}`);
+  };
 
   const menopauseStages = useMemo(() => [
     { value: 'perimenopause', label: t.profile.perimenopause },
@@ -87,7 +105,7 @@ export default function ProfileScreen({ navigation, user }) {
         });
       }
     } catch (error) {
-      console.error('Erreur chargement profil:', error);
+      logSupabaseError('Erreur chargement profil', error);
     } finally {
       setLoading(false);
     }
@@ -106,13 +124,71 @@ export default function ProfileScreen({ navigation, user }) {
 
       // Ignorer l'erreur si la table n'existe pas encore (migration pas exécutée)
       if (error && error.code !== 'PGRST116' && error.code !== '42P01') {
-        console.error('Erreur chargement traitement:', error);
+        logSupabaseError('Erreur chargement traitement', error);
       }
 
       setTreatment(data);
     } catch (error) {
       // Erreur silencieuse pour ne pas bloquer le reste de l'app
       console.log('Table hormone_treatment pas encore créée (migration en attente)');
+    }
+  };
+
+  const openTreatmentModal = () => {
+    setTreatmentDraft({
+      id: treatment?.id ?? null,
+      treatment_type: treatment?.treatment_type ?? 'oral_estrogen',
+      treatment_name: treatment?.treatment_name ?? '',
+      dosage: treatment?.dosage ?? '',
+      start_date: treatment?.start_date ?? new Date().toISOString().slice(0, 10),
+    });
+    setShowTreatmentModal(true);
+  };
+
+  const isValidISODate = (value) => /^\d{4}-\d{2}-\d{2}$/.test((value || '').trim());
+
+  const saveTreatment = async () => {
+    const startDate = (treatmentDraft.start_date || '').trim();
+    if (!isValidISODate(startDate)) {
+      Alert.alert(t.common.error, t.profile.startDate);
+      return;
+    }
+
+    setTreatmentSaving(true);
+    try {
+      // If creating a new active treatment, deactivate previous active treatments.
+      if (!treatmentDraft.id) {
+        await supabase
+          .from('hormone_treatment')
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .eq('user_id', user.id)
+          .eq('is_active', true);
+      }
+
+      const payload = {
+        user_id: user.id,
+        treatment_type: treatmentDraft.treatment_type,
+        treatment_name: treatmentDraft.treatment_name?.trim() || null,
+        dosage: treatmentDraft.dosage?.trim() || null,
+        start_date: startDate,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      };
+
+      const query = supabase.from('hormone_treatment');
+      const { error } = treatmentDraft.id
+        ? await query.update(payload).eq('id', treatmentDraft.id)
+        : await query.insert(payload);
+
+      if (error) throw error;
+
+      setShowTreatmentModal(false);
+      await loadTreatment();
+    } catch (error) {
+      logSupabaseError('Erreur sauvegarde traitement', error);
+      Alert.alert(t.common.error, t.profile.saveError);
+    } finally {
+      setTreatmentSaving(false);
     }
   };
 
@@ -323,154 +399,156 @@ export default function ProfileScreen({ navigation, user }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Email */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Account */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.profile.title}</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t.profile.email}</Text>
-            <View style={styles.disabledInput}>
-              <Text style={styles.disabledText}>{profile.email}</Text>
+          <View style={styles.groupContainer}>
+            <View style={styles.groupRow}>
+              <Text style={styles.rowLabel}>{t.profile.email}</Text>
+              <Text style={styles.rowValueMuted} numberOfLines={1}>
+                {profile.email}
+              </Text>
             </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t.profile.age}</Text>
-            <TextInput
-              style={styles.input}
-              value={profile.age}
-              onChangeText={(text) => setProfile(prev => ({ ...prev, age: text }))}
-              placeholder={t.profile.agePlaceholder}
-              keyboardType="numeric"
-              maxLength={2}
-            />
+            <View style={styles.groupDivider} />
+            <View style={styles.groupRow}>
+              <Text style={styles.rowLabel}>{t.profile.age}</Text>
+              <TextInput
+                style={styles.rowInput}
+                value={profile.age}
+                onChangeText={(text) => setProfile((prev) => ({ ...prev, age: text }))}
+                placeholder={t.profile.agePlaceholder}
+                placeholderTextColor={COLORS.gray[400]}
+                keyboardType="numeric"
+                maxLength={2}
+                returnKeyType="done"
+                textAlign="right"
+              />
+            </View>
           </View>
         </View>
 
         {/* Stade de ménopause */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.profile.menopauseStage}</Text>
-          <Text style={styles.label}>{t.profile.menopauseStage}</Text>
-          
-          {menopauseStages.map((stage) => (
-            <TouchableOpacity
-              key={stage.value}
-              style={[
-                styles.radioOption,
-                profile.menopause_stage === stage.value && styles.radioOptionSelected
-              ]}
-              onPress={() => setProfile(prev => ({ ...prev, menopause_stage: stage.value }))}
-            >
-              <View style={styles.radio}>
-                {profile.menopause_stage === stage.value && <View style={styles.radioInner} />}
-              </View>
-              <Text style={[
-                styles.radioLabel,
-                profile.menopause_stage === stage.value && styles.radioLabelSelected
-              ]}>
-                {stage.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <Text style={styles.sectionLabel}>{t.profile.menopauseStage}</Text>
+          <View style={styles.groupContainer}>
+            {menopauseStages.map((stage, index) => {
+              const selected = profile.menopause_stage === stage.value;
+              return (
+                <TouchableOpacity
+                  key={stage.value}
+                  style={styles.groupRow}
+                  onPress={() => setProfile((prev) => ({ ...prev, menopause_stage: stage.value }))}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.rowLabel, selected && styles.rowLabelSelected]}>
+                    {stage.label}
+                  </Text>
+                  {selected ? (
+                    <Ionicons name="checkmark" size={20} color={COLORS.primary} />
+                  ) : (
+                    <View style={styles.rowRightPlaceholder} />
+                  )}
+                  {index !== menopauseStages.length - 1 && <View style={styles.groupDivider} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         {/* Objectifs */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.profile.goals}</Text>
-          <Text style={styles.subtitle}>{t.profile.goalsSubtitle}</Text>
-          
-          <View style={styles.goalsGrid}>
-            {availableGoals.map((goal) => (
-              <TouchableOpacity
-                key={goal.id}
-                style={[
-                  styles.goalCard,
-                  profile.goals.includes(goal.id) && styles.goalCardSelected
-                ]}
-                onPress={() => toggleGoal(goal.id)}
-              >
-                <Ionicons
-                  name={goal.icon}
-                  size={24}
-                  color={profile.goals.includes(goal.id) ? COLORS.primary : COLORS.textLight}
-                />
-                <Text style={[
-                  styles.goalLabel,
-                  profile.goals.includes(goal.id) && styles.goalLabelSelected
-                ]}>
-                  {goal.label}
-                </Text>
-                {profile.goals.includes(goal.id) && (
-                  <View style={styles.checkmark}>
-                    <Ionicons name="checkmark" size={16} color="white" />
+          <Text style={styles.sectionLabel}>{t.profile.goals}</Text>
+          <Text style={styles.sectionHint}>{t.profile.goalsSubtitle}</Text>
+
+          <View style={styles.groupContainer}>
+            {availableGoals.map((goal, index) => {
+              const selected = profile.goals.includes(goal.id);
+              return (
+                <TouchableOpacity
+                  key={goal.id}
+                  style={styles.groupRow}
+                  onPress={() => toggleGoal(goal.id)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={styles.rowIconBadge}>
+                      <Ionicons name={goal.icon} size={16} color={COLORS.primary} />
+                    </View>
+                    <Text style={[styles.rowLabel, selected && styles.rowLabelSelected]}>
+                      {goal.label}
+                    </Text>
                   </View>
-                )}
-              </TouchableOpacity>
-            ))}
+                  {selected ? (
+                    <Ionicons name="checkmark" size={20} color={COLORS.primary} />
+                  ) : (
+                    <View style={styles.rowRightPlaceholder} />
+                  )}
+                  {index !== availableGoals.length - 1 && <View style={styles.groupDivider} />}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* Langue */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.profile.settings}</Text>
-          
-          <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
-          >
-            <View style={styles.settingLeft}>
-              <Ionicons name="language" size={22} color={COLORS.textSecondary} />
-              <Text style={styles.settingLabel}>{t.profile.language}</Text>
-            </View>
-            <View style={styles.settingRight}>
-              <Text style={styles.settingValue}>{language === 'fr' ? t.profile.french : t.profile.english}</Text>
-              <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
-            </View>
-          </TouchableOpacity>
+          <Text style={styles.sectionLabel}>{t.profile.settings}</Text>
+          <View style={styles.groupContainer}>
+            <TouchableOpacity
+              style={styles.groupRow}
+              onPress={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.rowLeft}>
+                <View style={styles.rowIconBadge}>
+                  <Ionicons name="language" size={16} color={COLORS.primary} />
+                </View>
+                <Text style={styles.rowLabel}>{t.profile.language}</Text>
+              </View>
+              <View style={styles.rowRight}>
+                <Text style={styles.rowValue}>{language === 'fr' ? t.profile.french : t.profile.english}</Text>
+                <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Traitement hormonal */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="medkit" size={24} color={COLORS.text} />
-            <Text style={styles.sectionTitle}>{t.profile.hormoneTreatment}</Text>
-          </View>
-          
-          {treatment ? (
-            <View style={styles.treatmentCard}>
-              <View style={styles.treatmentHeader}>
-                <View style={styles.treatmentBadge}>
-                  <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
-                  <Text style={styles.treatmentBadgeText}>{t.profile.treatmentActive}</Text>
+          <Text style={styles.sectionLabel}>{t.profile.hormoneTreatment}</Text>
+          <View style={styles.groupContainer}>
+            <TouchableOpacity
+              style={styles.groupRow}
+              onPress={openTreatmentModal}
+              activeOpacity={0.85}
+            >
+              <View style={styles.rowLeft}>
+                <View style={styles.rowIconBadge}>
+                  <Ionicons name="medkit" size={16} color={COLORS.primary} />
                 </View>
-                <TouchableOpacity onPress={() => setShowTreatmentModal(true)}>
-                  <Ionicons name="create-outline" size={20} color={COLORS.primary} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.treatmentInfo}>
-                <View style={styles.treatmentRow}>
-                  <Text style={styles.treatmentLabel}>{t.profile.treatmentType}</Text>
-                  <Text style={styles.treatmentValue}>
-                    {getTreatmentTypeLabel(treatment.treatment_type)}
+                <View>
+                  <Text style={styles.rowLabel}>
+                    {treatment ? t.profile.treatmentActive : t.profile.addTreatment}
                   </Text>
+                  {treatment && (
+                    <Text style={styles.rowSubValue} numberOfLines={1}>
+                      {getTreatmentTypeLabel(treatment.treatment_type)}
+                    </Text>
+                  )}
                 </View>
-                {treatment.treatment_name && (
-                  <View style={styles.treatmentRow}>
-                    <Text style={styles.treatmentLabel}>{t.profile.medication}</Text>
-                    <Text style={styles.treatmentValue}>{treatment.treatment_name}</Text>
-                  </View>
-                )}
-                {treatment.dosage && (
-                  <View style={styles.treatmentRow}>
-                    <Text style={styles.treatmentLabel}>{t.profile.dosage}</Text>
-                    <Text style={styles.treatmentValue}>{treatment.dosage}</Text>
-                  </View>
-                )}
-                <View style={styles.treatmentRow}>
-                  <Text style={styles.treatmentLabel}>{t.profile.startDate}</Text>
-                  <Text style={styles.treatmentValue}>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+
+            {treatment && (
+              <>
+                <View style={styles.groupDivider} />
+                <View style={styles.groupRow}>
+                  <Text style={styles.rowLabel}>{t.profile.startDate}</Text>
+                  <Text style={styles.rowValue}>
                     {new Date(treatment.start_date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
                       day: 'numeric',
                       month: 'long',
@@ -478,68 +556,54 @@ export default function ProfileScreen({ navigation, user }) {
                     })}
                   </Text>
                 </View>
-                <View style={styles.treatmentRow}>
-                  <Text style={styles.treatmentLabel}>{t.profile.duration}</Text>
-                  <Text style={styles.treatmentValue}>
-                    {Math.floor((new Date() - new Date(treatment.start_date)) / (1000 * 60 * 60 * 24))} {t.profile.durationDays}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.addTreatmentButton}
-              onPress={() => setShowTreatmentModal(true)}
-            >
-              <View style={styles.addTreatmentIconContainer}>
-                <Ionicons name="add-circle" size={32} color={COLORS.primary} />
-              </View>
-              <View style={styles.addTreatmentContent}>
-                <Text style={styles.addTreatmentTitle}>{t.profile.addTreatment}</Text>
-                <Text style={styles.addTreatmentSubtitle}>
-                  {t.profile.reportDescription}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
+              </>
+            )}
+          </View>
         </View>
 
         {/* Export PDF */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.profile.medicalReport}</Text>
-          
-          <TouchableOpacity
-            style={styles.pdfButton}
-            onPress={handleGeneratePDF}
-            disabled={loading}
-          >
-            <View style={styles.pdfIconContainer}>
-              <Ionicons name="document-text" size={24} color={COLORS.white} />
-            </View>
-            <View style={styles.pdfContent}>
-              <Text style={styles.pdfTitle}>{t.profile.generateReport}</Text>
-              <Text style={styles.pdfSubtitle}>
-                {t.profile.reportDescription}
-              </Text>
-            </View>
-            <Ionicons name="download" size={22} color={COLORS.primary} />
-          </TouchableOpacity>
+          <Text style={styles.sectionLabel}>{t.profile.medicalReport}</Text>
+          <View style={styles.groupContainer}>
+            <TouchableOpacity
+              style={styles.groupRow}
+              onPress={handleGeneratePDF}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              <View style={styles.rowLeft}>
+                <View style={styles.rowIconBadge}>
+                  <Ionicons name="document-text" size={16} color={COLORS.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowLabel}>{t.profile.generateReport}</Text>
+                  <Text style={styles.rowSubValue} numberOfLines={2}>
+                    {t.profile.reportDescription}
+                  </Text>
+                </View>
+              </View>
+              {loading ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Notifications */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.profile.notifications}</Text>
-          
-          <View style={styles.notificationCard}>
-            <View style={styles.notificationHeader}>
-              <View style={styles.notificationIconContainer}>
-                <Ionicons name="notifications" size={24} color={COLORS.primary} />
-              </View>
-              <View style={styles.notificationContent}>
-                <Text style={styles.notificationTitle}>{t.profile.enableNotifications}</Text>
-                <Text style={styles.notificationSubtitle}>
-                  {t.profile.notificationDescription}
-                </Text>
+          <Text style={styles.sectionLabel}>{t.profile.notifications}</Text>
+          <View style={styles.groupContainer}>
+            <View style={styles.groupRow}>
+              <View style={styles.rowLeft}>
+                <View style={styles.rowIconBadge}>
+                  <Ionicons name="notifications" size={16} color={COLORS.primary} />
+                </View>
+                <View>
+                  <Text style={styles.rowLabel}>{t.profile.enableNotifications}</Text>
+                  <Text style={styles.rowSubValue}>{t.profile.notificationDescription}</Text>
+                </View>
               </View>
               <Switch
                 value={notificationsEnabled}
@@ -550,55 +614,187 @@ export default function ProfileScreen({ navigation, user }) {
             </View>
 
             {notificationsEnabled && (
-              <TouchableOpacity
-                style={styles.testNotificationButton}
-                onPress={handleTestNotification}
-              >
-                <Ionicons name="send" size={16} color={COLORS.primary} />
-                <Text style={styles.testNotificationText}>
-                  {t.profile.testNotification}
-                </Text>
-              </TouchableOpacity>
+              <>
+                <View style={styles.groupDivider} />
+                <TouchableOpacity
+                  style={styles.groupRow}
+                  onPress={handleTestNotification}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.rowLeft}>
+                    <View style={styles.rowIconBadge}>
+                      <Ionicons name="send" size={16} color={COLORS.primary} />
+                    </View>
+                    <Text style={styles.rowLabel}>{t.profile.testNotification}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              </>
             )}
           </View>
         </View>
 
         {/* À propos */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="information-circle-outline" size={24} color={COLORS.text} />
-            <Text style={styles.sectionTitle}>{t.about.title}</Text>
+          <Text style={styles.sectionLabel}>{t.about.title}</Text>
+          <View style={styles.groupContainer}>
+            <TouchableOpacity
+              style={styles.groupRow}
+              onPress={() => navigation.navigate('about')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.rowLeft}>
+                <View style={styles.rowIconBadge}>
+                  <Ionicons name="heart" size={16} color={COLORS.primary} />
+                </View>
+                <Text style={styles.rowLabel}>{t.about.howItWorks}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+
+            <View style={styles.groupDivider} />
+            <TouchableOpacity
+              style={styles.groupRow}
+              onPress={() => navigation.navigate('about')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.rowLeft}>
+                <View style={styles.rowIconBadge}>
+                  <Ionicons name="shield-checkmark" size={16} color={COLORS.success} />
+                </View>
+                <Text style={styles.rowLabel}>{t.about.privacy}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.aboutButton}
-            onPress={() => navigation.navigate('about')}
-          >
-            <View style={styles.aboutButtonContent}>
-              <Ionicons name="heart" size={20} color={COLORS.primary} />
-              <Text style={styles.aboutButtonText}>{t.about.howItWorks}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.aboutButton}
-            onPress={() => navigation.navigate('about')}
-          >
-            <View style={styles.aboutButtonContent}>
-              <Ionicons name="shield-checkmark" size={20} color={COLORS.success} />
-              <Text style={styles.aboutButtonText}>{t.about.privacy}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
-          </TouchableOpacity>
         </View>
 
         {/* Déconnexion */}
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={22} color={COLORS.error} />
-          <Text style={styles.signOutText}>{t.profile.signOut}</Text>
-        </TouchableOpacity>
+        <View style={styles.section}>
+          <View style={styles.groupContainer}>
+            <TouchableOpacity style={[styles.groupRow, styles.centerRow]} onPress={handleSignOut}>
+              <Text style={styles.destructiveText}>{t.profile.signOut}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 24 }} />
       </ScrollView>
+
+      {/* Treatment Modal */}
+      <Modal
+        visible={showTreatmentModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowTreatmentModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => setShowTreatmentModal(false)}
+                style={styles.modalHeaderButton}
+              >
+                <Text style={styles.modalHeaderButtonText}>{t.common.cancel}</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>{t.profile.hormoneTreatment}</Text>
+              <TouchableOpacity
+                onPress={saveTreatment}
+                style={styles.modalHeaderButton}
+                disabled={treatmentSaving}
+              >
+                {treatmentSaving ? (
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                ) : (
+                  <Text style={[styles.modalHeaderButtonText, styles.modalHeaderButtonTextPrimary]}>
+                    {t.common.save}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
+              <Text style={styles.sectionLabel}>{t.profile.treatmentType}</Text>
+              <View style={styles.groupContainer}>
+                {Object.keys(t.profile.treatmentTypes).map((typeKey, index, arr) => {
+                  const selected = treatmentDraft.treatment_type === typeKey;
+                  return (
+                    <TouchableOpacity
+                      key={typeKey}
+                      style={styles.groupRow}
+                      onPress={() => setTreatmentDraft((prev) => ({ ...prev, treatment_type: typeKey }))}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={[styles.rowLabel, selected && styles.rowLabelSelected]}>
+                        {t.profile.treatmentTypes[typeKey]}
+                      </Text>
+                      {selected ? (
+                        <Ionicons name="checkmark" size={20} color={COLORS.primary} />
+                      ) : (
+                        <View style={styles.rowRightPlaceholder} />
+                      )}
+                      {index !== arr.length - 1 && <View style={styles.groupDivider} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={{ height: SPACING.lg }} />
+
+              <Text style={styles.sectionLabel}>{t.profile.medication}</Text>
+              <View style={styles.groupContainer}>
+                <View style={styles.groupRow}>
+                  <TextInput
+                    style={[styles.modalTextInput]}
+                    value={treatmentDraft.treatment_name}
+                    onChangeText={(text) => setTreatmentDraft((prev) => ({ ...prev, treatment_name: text }))}
+                    placeholder={t.profile.medication}
+                    placeholderTextColor={COLORS.gray[400]}
+                  />
+                </View>
+              </View>
+
+              <View style={{ height: SPACING.lg }} />
+
+              <Text style={styles.sectionLabel}>{t.profile.dosage}</Text>
+              <View style={styles.groupContainer}>
+                <View style={styles.groupRow}>
+                  <TextInput
+                    style={[styles.modalTextInput]}
+                    value={treatmentDraft.dosage}
+                    onChangeText={(text) => setTreatmentDraft((prev) => ({ ...prev, dosage: text }))}
+                    placeholder={t.profile.dosage}
+                    placeholderTextColor={COLORS.gray[400]}
+                  />
+                </View>
+              </View>
+
+              <View style={{ height: SPACING.lg }} />
+
+              <Text style={styles.sectionLabel}>{t.profile.startDate}</Text>
+              <View style={styles.groupContainer}>
+                <View style={styles.groupRow}>
+                  <TextInput
+                    style={[styles.modalTextInput]}
+                    value={treatmentDraft.start_date}
+                    onChangeText={(text) => setTreatmentDraft((prev) => ({ ...prev, start_date: text }))}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={COLORS.gray[400]}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
+                  />
+                </View>
+              </View>
+
+              <View style={{ height: SPACING.xl }} />
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -612,370 +808,174 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.background,
   },
   backButton: {
     padding: SPACING.xs,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 17,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.text,
+    letterSpacing: -0.2,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xl,
   },
   section: {
-    padding: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    marginBottom: SPACING.lg,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    marginBottom: SPACING.md,
-  },
-  inputGroup: {
-    marginBottom: SPACING.md,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-  },
-  input: {
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: SPACING.md,
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  disabledInput: {
-    backgroundColor: COLORS.backgroundLight,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: SPACING.md,
-  },
-  disabledText: {
-    fontSize: 16,
-    color: COLORS.textLight,
-  },
-  radioOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: SPACING.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.sm,
-  },
-  radioOptionSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
-  },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.sm,
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.primary,
-  },
-  radioLabel: {
-    fontSize: 15,
-    color: COLORS.text,
-  },
-  radioLabelSelected: {
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  goalsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-  },
-  goalCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: SPACING.md,
-    alignItems: 'center',
-    position: 'relative',
-  },
-  goalCardSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
-  },
-  goalLabel: {
-    fontSize: 13,
-    color: COLORS.text,
-    marginTop: SPACING.xs,
-    textAlign: 'center',
-  },
-  goalLabelSelected: {
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  checkmark: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: COLORS.primary,
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-    padding: SPACING.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  settingLabel: {
-    fontSize: 15,
-    color: COLORS.text,
-  },
-  settingRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-  },
-  settingValue: {
-    fontSize: 15,
+  sectionLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: SPACING.sm,
   },
-  pdfButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primaryLight,
-    padding: SPACING.lg,
+  sectionHint: {
+    fontSize: 13,
+    fontFamily: FONTS.body.regular,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.md,
+    lineHeight: 18,
+  },
+  groupContainer: {
+    backgroundColor: COLORS.white,
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
   },
-  pdfIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.md,
-  },
-  pdfContent: {
-    flex: 1,
-  },
-  pdfTitle: {
-    fontSize: 16,
-    fontFamily: FONTS.body.semibold,
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  pdfSubtitle: {
-    fontSize: 13,
-    fontFamily: FONTS.body.regular,
-    color: COLORS.textSecondary,
-    lineHeight: 18,
-  },
-  notificationCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.primaryLight,
-  },
-  notificationHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-  },
-  notificationIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notificationContent: {
-    flex: 1,
-  },
-  notificationTitle: {
-    fontSize: 16,
-    fontFamily: FONTS.body.semibold,
-    color: COLORS.text,
-    marginBottom: 2,
-  },
-  notificationSubtitle: {
-    fontSize: 13,
-    fontFamily: FONTS.body.regular,
-    color: COLORS.textSecondary,
-    lineHeight: 18,
-  },
-  testNotificationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 8,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    marginTop: SPACING.md,
-  },
-  testNotificationText: {
-    fontSize: 14,
-    fontFamily: FONTS.body.medium,
-    color: COLORS.primary,
-  },
-  aboutButton: {
+  groupRow: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
-  aboutButtonContent: {
+  groupDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: COLORS.border,
+    marginLeft: SPACING.lg,
+  },
+  rowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
+    flex: 1,
+    paddingRight: SPACING.md,
   },
-  aboutButtonText: {
+  rowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  rowIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowLabel: {
     fontSize: 15,
     fontFamily: FONTS.body.regular,
     color: COLORS.text,
   },
-  // Treatment Styles
-  treatmentCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.primaryLight,
-  },
-  treatmentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.md,
-  },
-  treatmentBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-    borderRadius: RADIUS.sm,
-  },
-  treatmentBadgeText: {
-    fontSize: 12,
+  rowLabelSelected: {
     fontFamily: FONTS.body.semibold,
-    color: COLORS.success,
+    color: COLORS.primary,
   },
-  treatmentInfo: {
-    gap: SPACING.sm,
-  },
-  treatmentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
-  },
-  treatmentLabel: {
-    fontSize: 14,
-    fontFamily: FONTS.body.regular,
+  rowValue: {
+    fontSize: 15,
+    fontFamily: FONTS.body.medium,
     color: COLORS.textSecondary,
   },
-  treatmentValue: {
-    fontSize: 14,
-    fontFamily: FONTS.body.semibold,
-    color: COLORS.text,
-  },
-  addTreatmentButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    borderStyle: 'dashed',
-  },
-  addTreatmentIconContainer: {
-    marginRight: SPACING.md,
-  },
-  addTreatmentContent: {
+  rowValueMuted: {
     flex: 1,
+    textAlign: 'right',
+    marginLeft: SPACING.md,
+    fontSize: 15,
+    fontFamily: FONTS.body.medium,
+    color: COLORS.gray[500],
   },
-  addTreatmentTitle: {
-    fontSize: 16,
-    fontFamily: FONTS.body.semibold,
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  addTreatmentSubtitle: {
+  rowSubValue: {
+    marginTop: 2,
     fontSize: 13,
     fontFamily: FONTS.body.regular,
     color: COLORS.textSecondary,
-    lineHeight: 18,
   },
-  signOutButton: {
+  rowInput: {
+    minWidth: 72,
+    fontSize: 15,
+    fontFamily: FONTS.body.medium,
+    color: COLORS.text,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+  },
+  rowRightPlaceholder: {
+    width: 20,
+  },
+  centerRow: {
+    justifyContent: 'center',
+  },
+  destructiveText: {
+    fontSize: 16,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.error,
+  },
+
+  // Modal
+  modalContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: COLORS.error,
-    borderRadius: 12,
-    padding: SPACING.md,
-    margin: SPACING.lg,
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
   },
-  signOutText: {
+  modalTitle: {
+    fontSize: 17,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.text,
+    letterSpacing: -0.2,
+  },
+  modalHeaderButton: {
+    minWidth: 72,
+  },
+  modalHeaderButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.error,
+    fontFamily: FONTS.body.medium,
+    color: COLORS.textSecondary,
+  },
+  modalHeaderButtonTextPrimary: {
+    color: COLORS.primary,
+    fontFamily: FONTS.body.semibold,
+  },
+  modalContent: {
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xl,
+  },
+  modalTextInput: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: FONTS.body.medium,
+    color: COLORS.text,
+    paddingVertical: 0,
   },
 });

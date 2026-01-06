@@ -62,9 +62,9 @@ export default function EmotionalJournalScreen({ navigation, user }) {
   const getSentimentColor = (sentiment) => {
     switch (sentiment) {
       case 'positive':
-        return '#48BB78';
+        return COLORS.success;
       case 'negative':
-        return '#F56565';
+        return COLORS.error;
       default:
         return COLORS.gray[400];
     }
@@ -73,9 +73,9 @@ export default function EmotionalJournalScreen({ navigation, user }) {
   const getTrendIcon = (trend) => {
     switch (trend) {
       case 'improving':
-        return { name: 'trending-up', color: '#48BB78' };
+        return { name: 'trending-up', color: COLORS.success };
       case 'declining':
-        return { name: 'trending-down', color: '#F56565' };
+        return { name: 'trending-down', color: COLORS.error };
       default:
         return { name: 'remove', color: COLORS.gray[400] };
     }
@@ -84,11 +84,11 @@ export default function EmotionalJournalScreen({ navigation, user }) {
   const getTrendMessage = (trend) => {
     switch (trend) {
       case 'improving':
-        return tj?.trendMessages?.improving ?? (isEn ? '📈 Your emotional well-being is improving!' : '📈 Votre bien-être émotionnel s\'améliore !');
+        return tj?.trendMessages?.improving ?? (isEn ? 'Your emotional well-being is improving.' : 'Votre bien-être émotionnel s\'améliore.');
       case 'declining':
-        return tj?.trendMessages?.declining ?? (isEn ? "📉 Take care of yourself—consider talking to someone you trust." : '📉 Prenez soin de vous, n\'hésitez pas à en parler.');
+        return tj?.trendMessages?.declining ?? (isEn ? 'Take care of yourself—consider talking to someone you trust.' : 'Prenez soin de vous, n\'hésitez pas à en parler.');
       default:
-        return tj?.trendMessages?.stable ?? (isEn ? '➡️ Your emotional well-being is stable.' : '➡️ Votre bien-être émotionnel est stable.');
+        return tj?.trendMessages?.stable ?? (isEn ? 'Your emotional well-being is stable.' : 'Votre bien-être émotionnel est stable.');
     }
   };
 
@@ -122,68 +122,77 @@ export default function EmotionalJournalScreen({ navigation, user }) {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {trends && (
-          <View style={styles.trendsSection}>
-            <Text style={styles.sectionTitle}>{tj?.analysisLast30Days ?? (isEn ? 'Analysis of the last 30 days' : 'Analyse des 30 derniers jours')}</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{tj?.analysisLast30Days ?? (isEn ? 'Analysis of the last 30 days' : 'Analyse des 30 derniers jours')}</Text>
 
             {/* Tendance générale */}
-            <View style={styles.trendCard}>
-              <View style={styles.trendHeader}>
-                <Ionicons 
-                  name={getTrendIcon(trends.trend).name}
-                  size={32}
-                  color={getTrendIcon(trends.trend).color}
-                />
-                <Text style={styles.trendMessage}>{getTrendMessage(trends.trend)}</Text>
+            <View style={styles.groupContainer}>
+              <View style={styles.groupRow}>
+                <View style={styles.rowLeft}>
+                  <View style={styles.rowIconBadge}>
+                    <Ionicons
+                      name={getTrendIcon(trends.trend).name}
+                      size={16}
+                      color={getTrendIcon(trends.trend).color}
+                    />
+                  </View>
+                  <Text style={styles.rowMainText}>{getTrendMessage(trends.trend)}</Text>
+                </View>
               </View>
             </View>
 
             {/* Statistiques */}
-            <View style={styles.statsGrid}>
-              <View style={[styles.statCard, { borderLeftColor: '#48BB78' }]}>
-                <Text style={styles.statValue}>{trends.positiveCount}</Text>
-                <Text style={styles.statLabel}>{tj?.stats?.positiveDays ?? (isEn ? 'Positive days' : 'Jours positifs')}</Text>
-                <Text style={styles.statEmoji}>😊</Text>
+            <View style={styles.statsRow}>
+              <View style={[styles.miniStat, { borderColor: COLORS.border }]}>
+                <View style={[styles.miniStatDot, { backgroundColor: COLORS.success }]} />
+                <Text style={styles.miniStatValue}>{trends.positiveCount}</Text>
+                <Text style={styles.miniStatLabel}>{tj?.stats?.positiveDays ?? (isEn ? 'Positive days' : 'Jours positifs')}</Text>
               </View>
-
-              <View style={[styles.statCard, { borderLeftColor: COLORS.gray[400] }]}>
-                <Text style={styles.statValue}>{trends.neutralCount}</Text>
-                <Text style={styles.statLabel}>{tj?.stats?.neutralDays ?? (isEn ? 'Neutral days' : 'Jours neutres')}</Text>
-                <Text style={styles.statEmoji}>😐</Text>
+              <View style={[styles.miniStat, { borderColor: COLORS.border }]}>
+                <View style={[styles.miniStatDot, { backgroundColor: COLORS.gray[400] }]} />
+                <Text style={styles.miniStatValue}>{trends.neutralCount}</Text>
+                <Text style={styles.miniStatLabel}>{tj?.stats?.neutralDays ?? (isEn ? 'Neutral days' : 'Jours neutres')}</Text>
               </View>
-
-              <View style={[styles.statCard, { borderLeftColor: '#F56565' }]}>
-                <Text style={styles.statValue}>{trends.negativeCount}</Text>
-                <Text style={styles.statLabel}>{tj?.stats?.difficultDays ?? (isEn ? 'Tough days' : 'Jours difficiles')}</Text>
-                <Text style={styles.statEmoji}>😕</Text>
+              <View style={[styles.miniStat, { borderColor: COLORS.border }]}>
+                <View style={[styles.miniStatDot, { backgroundColor: COLORS.error }]} />
+                <Text style={styles.miniStatValue}>{trends.negativeCount}</Text>
+                <Text style={styles.miniStatLabel}>{tj?.stats?.difficultDays ?? (isEn ? 'Tough days' : 'Jours difficiles')}</Text>
               </View>
             </View>
 
             {/* Score moyen */}
-            <View style={styles.averageCard}>
-              <Text style={styles.averageLabel}>{tj?.averageScore ?? (isEn ? 'Average well-being score' : 'Score de bien-être moyen')}</Text>
-              <View style={styles.averageBar}>
-                <View 
-                  style={[
-                    styles.averageProgress, 
-                    { 
-                      width: `${((trends.averageSentiment + 1) / 2) * 100}%`,
-                      backgroundColor: trends.averageSentiment > 0 ? '#48BB78' : '#F56565',
-                    }
-                  ]} 
-                />
+            <View style={styles.groupContainer}>
+              <View style={styles.groupRowColumn}>
+                <Text style={styles.subLabel}>{tj?.averageScore ?? (isEn ? 'Average well-being score' : 'Score de bien-être moyen')}</Text>
+                <View style={styles.averageBar}>
+                  <View
+                    style={[
+                      styles.averageProgress,
+                      {
+                        width: `${((trends.averageSentiment + 1) / 2) * 100}%`,
+                        backgroundColor:
+                          trends.averageSentiment > 0
+                            ? COLORS.success
+                            : trends.averageSentiment < 0
+                              ? COLORS.error
+                              : COLORS.gray[400],
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.averageValue}>
+                  {trends.averageSentiment > 0 ? '+' : ''}{(trends.averageSentiment * 100).toFixed(0)}%
+                </Text>
               </View>
-              <Text style={styles.averageValue}>
-                {trends.averageSentiment > 0 ? '+' : ''}{(trends.averageSentiment * 100).toFixed(0)}%
-              </Text>
             </View>
           </View>
         )}
 
         {/* Entrées du journal */}
-        <View style={styles.entriesSection}>
-          <Text style={styles.sectionTitle}>{tj?.latestNotes ?? (isEn ? 'Your latest notes' : 'Vos dernières notes')}</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{tj?.latestNotes ?? (isEn ? 'Your latest notes' : 'Vos dernières notes')}</Text>
           
           {logs.length === 0 ? (
             <View style={styles.emptyState}>
@@ -205,9 +214,6 @@ export default function EmotionalJournalScreen({ navigation, user }) {
                         month: 'long',
                       })}
                     </Text>
-                    {log.notes_sentiment_emoji && (
-                      <Text style={styles.entryEmoji}>{log.notes_sentiment_emoji}</Text>
-                    )}
                   </View>
                   {log.notes_sentiment && (
                     <View 
@@ -273,88 +279,117 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.md,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
+    backgroundColor: COLORS.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
   },
   backButton: {
     padding: SPACING.xs,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: FONTS.body.semibold,
     color: COLORS.text,
+    letterSpacing: -0.2,
   },
   placeholder: {
     width: 40,
   },
-  scrollView: {
-    flex: 1,
+  scrollContent: {
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xl,
   },
-  trendsSection: {
-    padding: SPACING.lg,
+  section: {
+    marginBottom: SPACING.lg,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontFamily: FONTS.heading.regular,
-    color: COLORS.text,
-    marginBottom: SPACING.md,
+  sectionLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.body.semibold,
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: SPACING.sm,
   },
-  trendCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.md,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
+  groupContainer: {
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
   },
-  trendHeader: {
+  groupRow: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.white,
+  },
+  groupRowColumn: {
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    backgroundColor: COLORS.white,
+  },
+  rowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-  },
-  trendMessage: {
     flex: 1,
-    fontSize: 16,
+  },
+  rowIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowMainText: {
+    flex: 1,
+    fontSize: 15,
     fontFamily: FONTS.body.medium,
     color: COLORS.text,
+    lineHeight: 20,
   },
-  statsGrid: {
+  statsRow: {
     flexDirection: 'row',
     gap: SPACING.sm,
+    marginTop: SPACING.md,
     marginBottom: SPACING.md,
   },
-  statCard: {
+  miniStat: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
     alignItems: 'center',
-    borderLeftWidth: 3,
   },
-  statValue: {
-    fontSize: 28,
-    fontFamily: FONTS.heading.regular,
+  miniStatDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginBottom: SPACING.sm,
+  },
+  miniStatValue: {
+    fontSize: 22,
+    fontFamily: FONTS.body.semibold,
     color: COLORS.text,
-    marginBottom: SPACING.xs,
+    marginBottom: 2,
   },
-  statLabel: {
+  miniStatLabel: {
     fontSize: 12,
     fontFamily: FONTS.body.regular,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    marginBottom: SPACING.xs,
+    lineHeight: 16,
   },
-  statEmoji: {
-    fontSize: 24,
-  },
-  averageCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.md,
-    padding: SPACING.lg,
-  },
-  averageLabel: {
-    fontSize: 14,
+  subLabel: {
+    fontSize: 13,
     fontFamily: FONTS.body.medium,
     color: COLORS.textSecondary,
     marginBottom: SPACING.sm,
@@ -371,18 +406,16 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
   },
   averageValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: FONTS.body.semibold,
     color: COLORS.text,
     textAlign: 'center',
   },
-  entriesSection: {
-    padding: SPACING.lg,
-    paddingTop: 0,
-  },
   entryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
     padding: SPACING.lg,
     marginBottom: SPACING.md,
   },
@@ -402,9 +435,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body.medium,
     color: COLORS.textSecondary,
     textTransform: 'capitalize',
-  },
-  entryEmoji: {
-    fontSize: 20,
   },
   sentimentBadge: {
     flexDirection: 'row',
@@ -434,8 +464,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: SPACING.md,
     paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.gray[200],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: COLORS.border,
   },
   indicator: {
     flexDirection: 'row',
